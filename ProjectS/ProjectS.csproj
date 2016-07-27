@@ -35,6 +35,8 @@
     <StartupObject>ProjectS.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -48,34 +50,57 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Forms\BlueForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\BlueForm.Designer.cs">
+      <DependentUpon>BlueForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CommonClasses\Util\adjustVolume.cs" />
     <Compile Include="Broadcast.cs" />
+    <Compile Include="ByteCommand.cs" />
     <Compile Include="CommonClasses\Hook\MouseKeyHook.cs" />
     <Compile Include="CommonClasses\Util\IpScanner.cs" />
+    <Compile Include="CommonClasses\Util\LogBuilder.cs" />
+    <Compile Include="CommonClasses\Util\SystemSleepManagement.cs" />
     <Compile Include="CommonClasses\Util\TxtIntrop.cs" />
-    <Compile Include="DebugForm.cs">
+    <Compile Include="Forms\DebugForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DebugForm.Designer.cs">
+    <Compile Include="Forms\DebugForm.Designer.cs">
       <DependentUpon>DebugForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="FormMasterMode.cs">
+    <Compile Include="CommonClasses\Util\forceTurnoff.cs" />
+    <Compile Include="Forms\FormMasterMode.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FormMasterMode.Designer.cs">
+    <Compile Include="Forms\FormMasterMode.Designer.cs">
       <DependentUpon>FormMasterMode.cs</DependentUpon>
     </Compile>
     <Compile Include="CommonClasses\Util\INIIntrop.cs" />
+    <Compile Include="Forms\SelectForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\SelectForm.Designer.cs">
+      <DependentUpon>SelectForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Main.cs" />
-    <Compile Include="ProcessCommand.cs" />
     <Compile Include="ProcessMouseKeyHook.cs" />
     <Compile Include="ProcessSocketMonitor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="DebugForm.resx">
+    <Compile Include="SocUnity.cs" />
+    <EmbeddedResource Include="Forms\BlueForm.resx">
+      <DependentUpon>BlueForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\DebugForm.resx">
       <DependentUpon>DebugForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="FormMasterMode.resx">
+    <EmbeddedResource Include="Forms\FormMasterMode.resx">
       <DependentUpon>FormMasterMode.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\SelectForm.resx">
+      <DependentUpon>SelectForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -97,7 +122,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="Config\App.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.ComponentModel;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace ProjectS //Independent System hook,no need dll file
 {
@@ -182,9 +183,9 @@ namespace ProjectS //Independent System hook,no need dll file
             {
                 KeyboardHookProcedure = new HookProc(KeyboardHookProc);
                 hKeyboardHook = SetWindowsHookEx(
-                    WH_KEYBOARD_LL, 
-                    KeyboardHookProcedure, 
-                    GetModuleHandle(System.Diagnostics.Process.GetCurrentProcess().MainModule.ModuleName), 
+                    WH_KEYBOARD_LL,
+                    KeyboardHookProcedure,
+                    GetModuleHandle(System.Diagnostics.Process.GetCurrentProcess().MainModule.ModuleName),
                     0);
                 //hKeyboardHook = SetWindowsHookEx(
                 //    WH_KEYBOARD_LL,
@@ -232,7 +233,6 @@ namespace ProjectS //Independent System hook,no need dll file
             }
         }
 
-
         private int MouseHookProc(int nCode, int wParam, IntPtr lParam)
         {
             if ((nCode >= 0) && (OnMouseActivity != null))
@@ -260,11 +260,11 @@ namespace ProjectS //Independent System hook,no need dll file
                     else clickCount = 1;
 
                 MouseEventArgs e = new MouseEventArgs(
-                                                   button,
-                                                   clickCount,
-                                                   mouseHookStruct.pt.x,
-                                                   mouseHookStruct.pt.y,
-                                                   mouseDelta);
+                                                    button,
+                                                    clickCount,
+                                                    mouseHookStruct.pt.x,
+                                                    mouseHookStruct.pt.y,
+                                                    mouseDelta);
                 OnMouseActivity(this, e);
             }
             if (mouse)
@@ -317,7 +317,6 @@ namespace ProjectS //Independent System hook,no need dll file
                 return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 
         }
-
     }
 
 }

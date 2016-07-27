@@ -11,32 +11,22 @@ using System.Windows.Forms;
 namespace ProjectS  
 {
     //get connect to internet,if failed try connect to local server.whatever which got connection , monitoring it.
-    // Connect() -> Monitoring() -> Destroy() -> Connect()...
     class ProcessSocketMonitor
     {
-        private Socket socket;//Server socket
-        //private List<Socket> SocketPool = new List<Socket>();
-        //private Dictionary<String, Socket> SocketPool = new Dictionary<String, Socket>();
-        private int server_count;//Count of server
-
-        public delegate void GotConnection_Event_Handler(object sender, Socket socket ,int server_count);
-        public delegate void LostConnection_Event_Handler(object sender, Socket socket, int server_count);
         public delegate void GotNewSocket_Event_Handler(object sender, Socket socket, String SocketIp);
-        public delegate void SocketCleanup_Event_Handler(object sender, int mode);
+        //public delegate void SocketCleanup_Event_Handler(object sender, int mode);
 
-        public event GotConnection_Event_Handler GotConnection_Event;
-        public event LostConnection_Event_Handler LostConnection_Event;
         public event GotNewSocket_Event_Handler GotNewSocket;
-        public event SocketCleanup_Event_Handler SocketCleanup;
+        //public event SocketCleanup_Event_Handler SocketCleanup;
 
         private bool on_global_mode;
         private bool on_master_mode;
 
-        //private Dictionary<String, IPAddress> MachinePortOff = new Dictionary<String, IPAddress>();
-        //private Dictionary<String, IPAddress> MachineOffLine = new Dictionary<String, IPAddress>();
-        private List<IPAddress> MachineConnectionFailed = new List<IPAddress>();
-        private List<IPAddress> MachineOffLine = new List<IPAddress>();
+        private List<SocUnity> SocUnityList = new List<SocUnity>();
+        private SocUnity ServantSocUnity;
 
+        System.Timers.Timer serGuardian = new System.Timers.Timer(5000);
+        
         public bool On_global_mode
         {
             get
@@ -45,20 +35,13 @@ namespace ProjectS
             }
         }
 
-        public ProcessSocketMonitor(Main main)
+        public ProcessSocketMonitor()
         {
             Main.MasterModeChanged += new Main.MasterMode_Changed_Event_Handler(mastermodeevent);
-            main.GlobalModeChanged += new Main.GlobalMode_Changed_Event_Handler(global_mode_event);
-        }
+            Main.GlobalModeChanged += new Main.GlobalMode_Changed_Event_Handler(global_mode_event);
 
-        public void start()
-        {
-            Thread monitor = new Thread(new ThreadStart(() =>
-            {
-
-            }));
-            monitor.IsBackground = true;
-            monitor.Start();
+            SocUnity.SocketConnectionLost += new SocUnity.SocketConnectionLost_Event_Handler(SocUnityConnectionLostEvent);
+            //ConnectedToServant += new ConnectedToServant_Event_Handler(ConnectedToServantEvent);
         }
 
         private Task ServantMode()
@@ -66,26 +49,44 @@ namespace ProjectS
             return Task.Run(() =>
             {
                 on_master_mode = false;
-
-                MessageBox.Show("Servant Mode");
-                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socket.Bind(new IPEndPoint(IPAddress.Any, Main.PORT));
-                socket.Listen(128);
-
-                try
-                {
-                    socket.BeginAccept(new AsyncCallback(MasterAccepted), socket);
-                }
-                catch(Exception e)
-                {
-                    MessageBox.Show(e.Message);
-                    Thread.Sleep(1000);
-                    //ServantMode();
-                }
-                
+                ServantSocUnity = new SocUnity();
+                ServantSocUnity.ServerAccepted += new SocUnity.ServerAccepted_Event_Handler(MasterConnected);
+                ServantSocUnity.ServerMode(Main.PORT);
             });
         }
 
+        private void SocUnityConnectionLostEvent(object sender, Socket socket, String ip)
+        {
+            try
+            {
+                if (!on_master_mode)
+                {
+                    var util = SocUnityList.Find((SocUnity su) => { return su.Ip.Equals(ip); });
+                    SocUnityList.Remove(util);
+                    util.Stop();
+                    util = null;
+                    MessageBox.Show("Master lost :" + ip);
+                }
+                else
+                {
+                    MessageBox.Show("Servant lost :" + ip);
+                }
+            }
+            catch(Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
+
+        }
+
+        private void MasterConnected(object sender, Socket socket, String ip)
+        {
+            SocUnity su = new SocUnity();
+            su.PassivityMode(socket);
+            SocUnityList.Add(su);
+
+            //MessageBox.Show("MasterComming : " + ip);
+        }
 
         private void MasterAccepted(IAsyncResult ar)
         {
@@ -93,7 +94,7 @@ namespace ProjectS
             {
                 var socket = ar.AsyncState as Socket;
                 var master = socket.EndAccept(ar);
-                var ip = master.RemoteEndPoint.ToString();
+                var ip = master.RemoteEndPoint.ToString().Split(':')[0];
                 //SocketPool.Add(ip, master);
                 //MessageBox.Show("new Master: " + ip);
                 GotNewSocket(this, master, ip);
@@ -108,82 +109,68 @@ namespace ProjectS
             {
                 on_master_mode = true;
 
-                MessageBox.Show("Master Mode");
-                foreach ( var ip in ipScan.ipScanProceed() )
+                List<String> tmp = ipScan.ipScanProceed();
+                switch(tmp[0])
+                {
+                    //不止一个本地IP，需要挑选
+                    case ipScan.IP_LIST_TYPE_HOST:
+                        MessageBox.Show("PLEASE FIX THIS FIRST!");
+                        break;
+
+                    //遍历完成，直接使用
+                    case ipScan.IP_LIST_TYPE_TARGET:
+                        tmp.RemoveAt(0);
+                        break;
+
+                    default:
+                        return;
+                }
+
+
+
+
+                foreach ( var ip in tmp)
+                {
                     ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
+                }
+                
+                SocUnity.SocketReconnected += new SocUnity.SocketReconnected_Event_Handler(ServantReconnectedEvent);
             });
+        }
+
+        private void ServantReconnectedEvent(object sender, Socket socket, String ip)
+        {
+            MessageBox.Show("SocketReconnectedEvent ip: " + ip);
         }
 
         private void TryToGetServant(Object str)
         {
-            System.Net.IPAddress IP = System.Net.IPAddress.Parse(str as String);//转换成IP地址
-
-            Thread t = new Thread(delegate()
+            try
             {
-                IPEndPoint address = new IPEndPoint(IP, Main.PORT);
-                var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                try
-                {
-                    System.Net.IPHostEntry myScanHost = System.Net.Dns.GetHostEntry(IP);//址获取 DNS 主机信息。 
-                    string strHostName = myScanHost.HostName.ToString();//获取主机的名                    
+                String ip = str as String;
+                SocUnity su = new SocUnity();
+                su.ClientMode(ip, Main.PORT);
+                SocUnityList.Add(su);
+            }
+            catch(Exception e)
+            {
+                MessageBox.Show(e.StackTrace);
+            }
+            
+        }
 
-                    //socket.BeginConnect(address, new AsyncCallback(ConnectedToServant), socket);
-                    socket.Connect(IP, Main.PORT);
-                }
-                catch (SocketException error)
-                {
-                    switch(error.ErrorCode)
-                    {
-                        //The attempt to connect timed out.
-                        case 10060:
-                            lock(MachineConnectionFailed)
-                            MachineConnectionFailed.Add(IP);
-                            return;
-
-                        //Connection is forcefully rejected.
-                        case 10061:
-                            lock (MachineConnectionFailed)
-                            MachineConnectionFailed.Add(IP);
-                            return;
-
-                        //Authoritative answer: Host not found.
-                        case 11001:
-                            lock (MachineOffLine)
-                            MachineOffLine.Add(IP);
-                            return;
-
-                        //Valid name, no data record of requested type
-                        case 11004:
-                            lock (MachineOffLine)
-                            MachineOffLine.Add(IP);
-                            return;
-
-                        default:
-                            MessageBox.Show("error code: " + error.ErrorCode + "\r\n" + error.Message + " ip: " + IP.ToString());
-                            return;
-                    }
-                }
-                catch(Exception e)
-                {
-                    MessageBox.Show(e.Message + " ip: " + IP.ToString());
-                    return;
-                }
-                //MessageBox.Show("new Servant: " + socket.RemoteEndPoint.ToString());
-                GotNewSocket(this, socket, socket.RemoteEndPoint.ToString());
-            });
-            t.Start();
+        private void ConnectedToServantEvent(object sender, Socket socket, String ip)
+        {
+            MessageBox.Show("Servant connected : " + ip);
         }
 
         private void SocketReset()
         {
-            if(socket != null)
-            {
-                socket.Close();
-                socket.Dispose();
-                socket = null;
-            }
+            SocUnity.SocketConnected -= new SocUnity.SocketConnected_Event_Handler(ConnectedToServantEvent);
 
-            SocketCleanup(this, 0);
+            SocUnityList.Clear();
+            ServantSocUnity = null;
+            //SocketCleanup(this, 0);
         }
 
         private void mastermodeevent(object sender, int mode_code)
@@ -196,6 +183,7 @@ namespace ProjectS
                     break;
 
                 case Main.SERVANT_MODE:
+                    DebugForm.DMes("Servant Mode");
                     SocketReset();
                     ServantMode();
                     break;
@@ -211,10 +199,12 @@ namespace ProjectS
             {
                 case Main.Local_MODE:
                     on_global_mode = false;
+                    DebugForm.DMes("Local Mode");
                     break;
 
                 case Main.Global_MODE:
                     on_global_mode = true;
+                    DebugForm.DMes("Global Mode");
                     break;
 
                 default:

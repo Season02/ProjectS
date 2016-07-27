@@ -49,7 +49,10 @@ namespace ProjectS
 
         private void hook_KeyDown(object sender, KeyEventArgs e)
         {
-            KeyDown_Event(sender, e);
+            //Task.Run(() => 
+            //{ 
+                KeyDown_Event(sender, e); 
+            //});
         }
 
 

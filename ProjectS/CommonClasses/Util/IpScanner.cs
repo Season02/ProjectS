@@ -11,14 +11,20 @@ namespace ProjectS
 {
     public class ipScan
     {
+        // Summary:
+        //          预挑选的本地IP，挑选一个作为IP遍历的前缀
+        public const String IP_LIST_TYPE_HOST = "IP_LIST_TYPE_HOST";
+        // Summary:
+        //          已选好的作为被遍历前缀的IP
+        public const String IP_LIST_TYPE_TARGET = "IP_LIST_TYPE_TARGET";
+
         public delegate void Some_Event_Handler(object sender, int mode_code);
-        public event Some_Event_Handler SomeEvent;
 
         public delegate void UpdatelistDelegate(string ip, string machine);//Update listview delegate
 
         private static List<String> IpTable = new List<string>();
         private static Dictionary<String, Socket> SocketPool = new Dictionary<String, Socket>();
-        private static List<String> canditateIP = new List<String>();
+        //private static List<String> canditateIP = new List<String>();
 
         public int postbackIndex;
 
@@ -38,7 +44,8 @@ namespace ProjectS
             try
             {
                 myHost = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());//得到本地主机的DNS信息
-                MessageBox.Show( "HostName: " + myHost.HostName.ToString() + "\r\n");
+                DebugForm.DMes("HostName: " + myHost.HostName.ToString());
+                //MessageBox.Show( "HostName: " + myHost.HostName.ToString() + "\r\n");
 
                 foreach (var iptable in myHost.AddressList)//显示本地主机的IP地址表
                 {
@@ -54,32 +61,73 @@ namespace ProjectS
 
             if(IpTable.Count() == 1)
             {
-                MessageBox.Show(IpTable[0]);
-                return ipScanTarget(IpTable[0]);
+                DebugForm.DMes("IpTale.Count == 1 : " + IpTable[0]);
+                return buidIpList(ipScan.IP_LIST_TYPE_TARGET, IpTable);
             }
             else if(IpTable.Count() > 1)
             {
                 foreach (var ip in IpTable)
-                    MessageBox.Show(ip);
-                return canditateIP;
+                    DebugForm.DMes("IpTale.Count > 1 : " + ip);
+
+                return buidIpList(ipScan.IP_LIST_TYPE_HOST, IpTable);
+            }
+            else
+            {
+                return null;
+            }
+            
+        }
+
+        public static List<String> cutHead(List<String> list)
+        {
+            list.RemoveAt(0);
+            return list;
+        }
+
+        // Summary:
+        //          如果 listType 为 IP_LIST_TYPE_HOST 那么说明本地有一个以上IP，需要挑选一个作为用来遍历目标机器的前缀;
+        //          如果 listType 为 IP_LIST_TYPE_TARGET 那么本机只有一个IP，可以直接用来遍历
+        public static List<String> buidIpList(String listType, List<String> hostIp)
+        {
+            List<String> canditateIP = new List<String>();
+
+            //check validation
+            switch(listType)
+            {
+                case ipScan.IP_LIST_TYPE_HOST:
+                    canditateIP = null;
+                    canditateIP = hostIp;
+                    canditateIP.Insert(0, ipScan.IP_LIST_TYPE_HOST);
+                    
+                    break;
+
+                case ipScan.IP_LIST_TYPE_TARGET:
+                    canditateIP.Add(ipScan.IP_LIST_TYPE_TARGET);
+
+                    string[] list = hostIp[0].Split('.');//Extract something
+                    string strIPAddress = list[0] + "." + list[1] + "." + list[2] + ".";
+
+                    int nStrat = Int32.Parse("1");//开始扫描地址 
+                    int nEnd = Int32.Parse("254");//终止扫描地址 
+
+                    for (int i = nStrat; i <= nEnd; i++)//扫描的操作 
+                    {
+                        canditateIP.Add(strIPAddress + i.ToString());
+                    }
+
+                    break;
+
+                default:
+                    return null;
             }
 
             return canditateIP;
-
-            //selectHost sh = new selectHost(this);
-            //sh.IPLIST = ipList;//Transmit candidate iplist to selectHost Window
-            //sh.pipe_Event += new selectHost.pipeevent_Handler((Object s, int _index) =>
-            //{
-            //    postbackIndex = _index;
-            //    System.Threading.Thread thScan = new System.Threading.Thread(new System.Threading.ThreadStart(ipScanTarget));
-            //    thScan.IsBackground = true;
-            //    thScan.Start();
-            //});
-            //sh.Show();
         }
 
         private static List<String> ipScanTarget(String host)
         {
+            List<String> canditateIP = new List<String>();
+
             var watch = new Stopwatch();
             watch.Start();
 
