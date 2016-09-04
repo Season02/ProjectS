@@ -6,14 +6,17 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+
+using Newtonsoft.Json;
 
 namespace ProjectS
 {
     //SOCKET HELPER
-    class SocUnity
+    public class SocUnity
     {
+        public delegate void DelegateSendDone(String ip, int state);
+
         public delegate void ServerAccepted_Event_Handler(object sender, Socket socket, String ip);
         public delegate void SocketConnectionLost_Event_Handler(object sender, Socket socket, String ip);
         public delegate void SocketReconnected_Event_Handler(object sender, Socket socket, String ip);
@@ -29,6 +32,17 @@ namespace ProjectS
         private Socket socket;
         private String ip;
         private int port;
+        private int errorCodeConnect = 0;
+
+        //32位最大能一次表达4G的文件，现在不会一次发送传送超过这个量级
+        private int DefaultBufferSize = 1024;
+
+        public const String JSON_CONST_STATE_SUCCESS = "SUCCESS";
+
+        public int ErrorCodeConnect
+        {
+            get { return errorCodeConnect; }
+        }
 
         public String Ip
         {
@@ -53,7 +67,7 @@ namespace ProjectS
             get { return server_running; }
         }
 
-        public bool AutoReconnect = true;
+        public bool AutoReconnect = false;//是否开启自动重连
         private bool NeedReconnect = false;
 
         //String fileName;
@@ -95,6 +109,8 @@ namespace ProjectS
             AutoReconnecter.Enabled = true; //是否触发Elapsed事件            
 
             SocketConnectionLost += new SocketConnectionLost_Event_Handler(SocketConnectionLostFunc);
+
+            socket.ReceiveTimeout = 2000;//设置RECEIVE 方法接收超时时间
         }
 
         private void AutoReconnectFunc(Object Sender, EventArgs e)
@@ -158,8 +174,8 @@ namespace ProjectS
 
                 if (socket != null)
                 {
-                    this.socket.Close();
-                    this.socket.Dispose();
+                    //this.socket.Close();
+                    //this.socket.Dispose();
                     this.socket = null;
                 }
 
@@ -177,20 +193,29 @@ namespace ProjectS
 
         }
 
-        public void ClientMode(String ip, int port)
+        //Task<String> task = Task.Factory.StartNew<String>(() => DownloadString("kkk"));
+        //String taskResult = Task.Result;
+
+        //Func<string, int> methond = Work;
+        //IAsyncResult cookie = Method.BeginInovke("test",null,null);
+
+        //int result = Method.EndInvoke(cookie);
+
+        public int ClientMode(String ip, int port)
         {
             System.Net.IPAddress IP = System.Net.IPAddress.Parse(ip);//转换成IP地址
+            //int return_code = 0;
 
-            Thread t = new Thread(delegate()
-            {
+            //Thread t = new Thread(new ThreadStart(() =>
+            //{
                 IPEndPoint address = new IPEndPoint(IP, port);
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {
-                    System.Net.IPHostEntry myScanHost = System.Net.Dns.GetHostEntry(IP);//址获取 DNS 主机信息。 
-                    string strHostName = myScanHost.HostName.ToString();//获取主机的名            
+                    System.Net.IPHostEntry myScanHost = System.Net.Dns.GetHostEntry(IP);//址获取 DNS 主机信息.
+                    string strHostName = myScanHost.HostName.ToString();//获取主机的名
 
-                    DebugForm.DMes("ClientMode: connecting to: Host Name: " + strHostName + " ip:" + ip + " port : " + port);
+                    DebugForm.DMes("ClientMode- connecting to: Host Name: " + strHostName + " ip:" + ip + " port : " + port);
 
                     socket.Connect(IP, Main.PORT);
                 }
@@ -200,63 +225,86 @@ namespace ProjectS
                     {
                         //The attempt to connect timed out.
                         case 10060:
-                            return;
+                            break;
 
                         //Connection is forcefully rejected.
                         case 10061:
-                            return;
+                            break;
 
                         //Authoritative answer: Host not found.
                         case 11001:
-                            return;
+                            break;
 
                         //Valid name, no data record of requested type
                         case 11004:
-                            return;
+                            break;
 
                         default:
                             MessageBox.Show("error code: " + error.ErrorCode + "\r\n" + error.Message + " ip: " + IP.ToString());
-                            return;
+                            break;
                     }
+
+                    //errorCodeConnect = error.ErrorCode;
+                    DebugForm.DMes("CMode Error at: " + ip + ":" + port + " with code: " + error.ErrorCode);
+                    return error.ErrorCode;
                 }
                 catch (Exception e)
                 {
-                    DebugForm.DMes("ClientMode: connecting Error: ip:" + ip + " port : " + port);
-                    //MessageBox.Show(e.Message + " ip: " + IP.ToString());
-                    return;
+                    //errorCodeConnect = -1;
+                    DebugForm.DMes("ClientMode: connecting Error: " + ip + ":" + port);
+                    MessageBox.Show(e.Message + " ip: " + IP.ToString());
+                    return -1;
                 }
+
+            try
+            {
                 ClientMode(socket);
-                SocketConnected(this.socket, socket, socket.RemoteEndPoint.ToString().Split(':')[0]);
-            });
-            t.IsBackground = true;
-            t.Start();
+                SocketConnected(this, socket, ip);
+            }
+            catch(NullReferenceException e)
+            {
+                MessageBox.Show(e.Message + " ip: " + IP.ToString());
+                return -2;
+            }
+            
+            //else errorCodeConnect = -2;
+
+            //}));
+            //t.IsBackground = true;
+            //t.Start();
+
+            return 1;
         }
 
         public bool ClientMode(Socket socket)
         {
-            if(this.socket != null) return false;
+            //if(this.socket != null) return false;
             this.socket = socket;
             connection_count++;
             AutoReconnecter.Start();
 
             ip = socket.RemoteEndPoint.ToString().Split(':')[0];
             port = Convert.ToInt32(socket.RemoteEndPoint.ToString().Split(':')[1]);
-            DebugForm.DMes("ClientMode ip: " + ip + " port : " + port);
+            DebugForm.DMes("ClientMode(Socket socket)-> ip: " + ip + " port : " + port);
 
-            Thread t = new Thread(new ThreadStart(() =>
-            {
-                try
-                {
-                    socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
-                }
-                catch (Exception e)
-                {
-                    SocketConnectionLost(this, socket, ip);
-                    MessageBox.Show("ClientMode Error: " + e.Message + " ip: " + ip);
-                }
-            }));
-            t.IsBackground = true;
-            t.Start();            
+            //Thread t = new Thread(new ThreadStart(() =>
+            //{
+            //Task.Run(() =>
+            //{
+            //    try
+            //    {
+            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        SocketConnectionLost(this, socket, ip);
+            //        MessageBox.Show("ClientMode Error: " + e.Message + " ip: " + ip);
+            //    }
+            //});
+                
+            //}));
+            //t.IsBackground = true;
+            //t.Start();            
 
             return true;
         }
@@ -274,7 +322,105 @@ namespace ProjectS
             }
             return data;
         }
-        
+
+
+        /// <summary>
+        /// 一个原型，用来进行SOCKET的发送，目前认为发送JSON格式比较合适，但数据的结构处理和原先相同，即发送
+        /// 定长的数据，比如1024B，这是基本的情况，在数据比较长，比如发送文件的情况下，用一个属性进行标记，比
+        /// 如总包数，当前包索引等。
+        /// 
+        /// 这个函数应该会有很多的重载版本，因为使用JSON格式，在发送时要指定好包数，附加信息等等，有些简单的命
+        /// 令可能因为结构简单就不需要一一指定了.
+        /// 
+        /// 现在先试着写一个最简单的版本,即兼容原先的 ByteCommand 的版本。
+        /// 
+        /// 答UTF8肯定能识别汉字的，google网页就是UTF8，只是解码的时候要用原来的编码解码，
+        /// 如果是utf8就要用Encoding.UTF8.GetString(bytes）解码 你可以用Encoding对应的编码转换成byte，
+        /// 例如： string s="连接"; byte[] bytes= Encoding.UTF8.GetBytes(s); C#这样做是有道理的，
+        /// 因为不同的编码对应的Byte是不一样的，在消息设计的时候要么约定只使用一种编码（如UTF8）要么在消息头
+        /// 用编码页告诉传输方编码，编码页是int32类型的，可以方便的用bytes处理
+        /// 
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="data"></param>
+        public void Send(DelegateSendDone doneDelegate, byte[] data)
+        {
+            Task<int> task = Task<int>.Factory.StartNew(() =>
+            {
+                if (socket.Connected != true)
+                    return -1;
+
+                var serize = new Dictionary<String, object>();
+                serize.Add("type", "byte_command");
+                serize.Add("total_count", "1");
+                serize.Add("current_index", "0");
+                serize.Add("data", data);
+
+                string json = JsonConvert.SerializeObject(serize);
+                var buffer = Encoding.UTF8.GetBytes(json);
+
+                byte[] returnBuffer = new byte[DefaultBufferSize];
+
+                try
+                {
+                    //sendBuffer[index] = data;
+                    socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, null, null);
+
+                    //超过两秒会异常，之后的逻辑处理可以有SOCKET状态检查，或者其他的
+                    socket.Receive(returnBuffer);
+                    //这里会阻塞两秒
+                    String returnBufferString = Encoding.UTF8.GetString(returnBuffer);
+
+                    Dictionary<string, string> htmlAttributes = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnBufferString);
+                    String returnState = htmlAttributes["state"];
+
+                    if (returnState.Equals(JSON_CONST_STATE_SUCCESS))
+                        return 1;
+                    else
+                        return 0;
+                }
+                catch (SocketException ex)
+                {
+                    MessageBox.Show(ex.Message + "\r\n From: socket.Send code: " + ex.ErrorCode);
+                    return 0;
+                }
+
+            });
+
+            task.ContinueWith(unit =>
+            {
+                //if (unit.Result == 1)
+                    doneDelegate(ip, unit.Result);
+                //else 根据错误码做相应处理
+            });
+            
+        }
+
+
+        /// <summary>
+        /// 发送体使用 TASK 或 THREAD 使用子线程操作，因为完成一次发送后需要等待
+        /// 接收方返回确认，这回阻塞线程，并且需要返回结果，
+        /// 
+        /// IAsyncResult 的获取可能会阻塞线程，使用回调更加合适
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="callback"></param>
+        /// <returns></returns>
+        //public IAsyncResult Send(byte[] data, AsyncCallback callback, object state)
+        //{
+        //    Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
+
+        //    task.ContinueWith(unit =>
+        //    {
+        //        if (unit.Result == 1)
+        //            callback(state);
+        //        //else 根据错误码做相应处理
+
+        //    });
+
+        //    return -1;
+        //}
+
         private void BeginReceiveCallback(IAsyncResult ar)
         {
             Socket socket;
@@ -293,7 +439,7 @@ namespace ProjectS
             }
             catch (Exception e)
             {
-                MessageBox.Show("BeginReceiveCallback err ip:" + ip + "message:" + e.Message);
+                MessageBox.Show("BeginReceiveCallback err ip:" + ip + "message:" + e.Message + "\nthread :" + Thread.CurrentThread);
                 SocketConnectionLost(this, this.socket, ip);
                 return;
             }
@@ -334,6 +480,7 @@ namespace ProjectS
 
             if (1 < 0)
             {
+                // 现在尽量采用 字符 判断方式
                 switch (3)
                 {
                     case 1://CMD Comand
@@ -451,17 +598,31 @@ namespace ProjectS
 
             //}
 
-            try
-            {
-                socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show("BeginReceive Inside: " + e.Message);
-            }
+            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
             
         }
 
+        private void tryBeginReceiveCallback(IAsyncResult ar)
+        {
+            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(tryBeginReceiveCallback), socket);
+        }
+
+        //
+        // Summary:
+        //     被动模式。主要用于在独立线程上接收 Socket 传来的数据，连接断开后不自动重连。
+        //
+        // Parameters:
+        //   socket:
+        //     要被监测的 Socket
+        //
+        // Tip:
+        //      BeginReceive 是异步执行的，貌似没有必要用 Task.Run 包裹，另外，由于Begin函数执行后立即返回，try块也就立刻终结了，没有机会捕获异常，也就没有存在意义。
+        //
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <returns></returns>
         public bool PassivityMode(Socket socket)
         {
             //if (this.socket != null) this.socket = null;
@@ -472,24 +633,21 @@ namespace ProjectS
             ip = socket.RemoteEndPoint.ToString().Split(':')[0];
             port = Convert.ToInt32(socket.RemoteEndPoint.ToString().Split(':')[1]);
             //MessageBox.Show("ClientMode ip: " + ip + " port : " + port);
-            DebugForm.DMes("ClientMode ip: " + ip + " port : " + port);
+            DebugForm.DMes("PassivityMode( ip: " + ip + " port : " + port + " )");
 
-            Thread t = new Thread(new ThreadStart(() =>
-            {
-                try
-                {
-                    socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
-                    //MessageBox.Show("BeginReceive");
-                }
-                catch (Exception e)
-                {
-                    SocketConnectionLost(this, socket, socket.RemoteEndPoint.ToString().Split(':')[0]);
-                    MessageBox.Show("BeginReceive Outside: " + e.Message + " ip: " + socket.RemoteEndPoint.ToString().Split(':')[0]);
-                }
-                //MessageBox.Show("End of line");
-            }));
-            t.IsBackground = true;
-            t.Start();
+            //Task.Run(() =>
+            //{
+            //    try
+            //    {
+            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
+            //        MessageBox.Show("BeginReceive");
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        MessageBox.Show("BeginReceive Outside: " + e.Message + " ip: " + socket.RemoteEndPoint.ToString().Split(':')[0]);
+            //        SocketConnectionLost(this, socket, socket.RemoteEndPoint.ToString().Split(':')[0]);
+            //    }
+            //});
 
             return true;
         }
@@ -501,24 +659,28 @@ namespace ProjectS
                 this.port = port;
                 server_running = true;
 
-                Thread t = new Thread(new ThreadStart(() =>
-                {
-                    try
-                    {
-                        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        socket.Bind(new IPEndPoint(IPAddress.Any, port));
-                        socket.Listen(256);
-                        socket.BeginAccept(new AsyncCallback(ServerModeCallback), socket);
-                    }
-                    catch (Exception e)
-                    {
-                        MessageBox.Show(this + e.Message);
-                        Thread.Sleep(1000);
-                        //ServantMode();
-                    }
-                }));
-                t.IsBackground = true;
-                t.Start();
+                //Thread t = new Thread(new ThreadStart(() =>
+                //{
+                    //Task.Run(() =>
+                    //{
+                        try
+                        {
+                            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                            socket.Bind(new IPEndPoint(IPAddress.Any, port));
+                            socket.Listen(256);
+                            socket.BeginAccept(new AsyncCallback(ServerModeCallback), socket);
+                        }
+                        catch (Exception e)
+                        {
+                            MessageBox.Show(this + e.Message);
+                            Thread.Sleep(1000);
+                            //ServantMode();
+                        }
+                    //});
+                    
+                //}));
+                //t.IsBackground = true;
+                //t.Start();
 
                 return true;
             }

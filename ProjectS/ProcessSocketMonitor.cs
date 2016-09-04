@@ -11,7 +11,7 @@ using System.Windows.Forms;
 namespace ProjectS  
 {
     //get connect to internet,if failed try connect to local server.whatever which got connection , monitoring it.
-    class ProcessSocketMonitor
+    public class ProcessSocketMonitor
     {
         public delegate void GotNewSocket_Event_Handler(object sender, Socket socket, String SocketIp);
         //public delegate void SocketCleanup_Event_Handler(object sender, int mode);
@@ -44,6 +44,7 @@ namespace ProjectS
             //ConnectedToServant += new ConnectedToServant_Event_Handler(ConnectedToServantEvent);
         }
 
+        /* ---- ServantMode 设计为被控制端，在Socket中为Server端 ---- */
         private Task ServantMode()
         {
             return Task.Run(() =>
@@ -55,6 +56,36 @@ namespace ProjectS
             });
         }
 
+
+        /// <summary>
+        /// 设计用来得到一个SOCKET对象，或者一个流对象，因为这是控制面板需要使用的，所以可能一个输出流就足够
+        /// 但整体还在建设中，一切都还不确定
+        /// 
+        /// 或许控制台只需要一个编号，或一个IP，然后做操作时还是有这个或其他类来处理
+        /// </summary> 
+        /// <param name="ip"></param>
+        /// <returns></returns>
+        public SocUnity SearchSocketUnity(String ip)
+        {
+            try
+            {
+                return SocUnityList.Find((SocUnity su) => { return su.Ip.Equals(ip); });
+            }
+            catch(ArgumentNullException e)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// SOCKET连接丢失时执行此函数
+        /// 
+        /// 此函数任在建设中，对于 SERVANT MODE 中的丢失 SOCKET 现在采用的是直接
+        /// 丢弃的做法，但计划是集中到某个集合中，尝试再次利用。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="socket"></param>
+        /// <param name="ip"></param>
         private void SocUnityConnectionLostEvent(object sender, Socket socket, String ip)
         {
             try
@@ -62,9 +93,9 @@ namespace ProjectS
                 if (!on_master_mode)
                 {
                     var util = SocUnityList.Find((SocUnity su) => { return su.Ip.Equals(ip); });
-                    SocUnityList.Remove(util);
+                    //SocUnityList.Remove(util);
                     util.Stop();
-                    util = null;
+                    //util = null;
                     MessageBox.Show("Master lost :" + ip);
                 }
                 else
@@ -74,18 +105,22 @@ namespace ProjectS
             }
             catch(Exception e)
             {
-                MessageBox.Show(e.Message);
+                MessageBox.Show("SocUnityConnectionLostEvent // " + e.Message);
             }
 
         }
 
+        //Servant 在接入到新的 Master 时调用此事件函数
         private void MasterConnected(object sender, Socket socket, String ip)
         {
-            SocUnity su = new SocUnity();
-            su.PassivityMode(socket);
-            SocUnityList.Add(su);
-
-            //MessageBox.Show("MasterComming : " + ip);
+            if(socket.Connected)
+            {
+                SocUnity su = new SocUnity();
+                su.PassivityMode(socket);
+                SocUnityList.Add(su);
+            }
+            
+            MessageBox.Show("MasterComming : " + ip);
         }
 
         private void MasterAccepted(IAsyncResult ar)
@@ -103,36 +138,82 @@ namespace ProjectS
 
         }
 
+        // Summary:
+        //         控制模式 首先扫描本地IP地址表 筛选出 IP 前缀，然后进行全地址遍历尝试与所有可能的 Servant 进行
+        //         连接，按照设计对所有 可能的但又未能在本次遍历中连接到的Servant 会进行定时重连操作。
+        //
+        // Tip:
+        //         关于自动重连，由于SocUnity自身对Socket中的 Client 模式有自动重连的功能，所以在 ProcessSocketMonitor 
+        //         中 只需要监听 SocUnity 的重连事件，然后做相应处理。
+        public static int public_index = -1;
         private Task MasterMode()
         {
+            on_master_mode = true;
+
             return Task.Run(() =>
             {
-                on_master_mode = true;
+                List<String> ipList = ipScan.ipScanProceed();
 
-                List<String> tmp = ipScan.ipScanProceed();
-                switch(tmp[0])
+                switch (ipList[0])
                 {
                     //不止一个本地IP，需要挑选
                     case ipScan.IP_LIST_TYPE_HOST:
-                        MessageBox.Show("PLEASE FIX THIS FIRST!");
+                        ipList.RemoveAt(0);
+
+                        SelectForm sf = new SelectForm();
+                        sf.AddData(ipList);
+                        sf.ShowDialog();
+                        
+                        String tmp = ipList[public_index];
+
+                        ipList.Clear();
+                        ipList.Add(tmp);
+
+                        ipList = ipScan.buidIpList(ipScan.IP_LIST_TYPE_TARGET, ipList);
+
                         break;
 
                     //遍历完成，直接使用
                     case ipScan.IP_LIST_TYPE_TARGET:
-                        tmp.RemoveAt(0);
+                        ipList.RemoveAt(0);
                         break;
 
                     default:
                         return;
                 }
 
-
-
-
-                foreach ( var ip in tmp)
+                foreach (var ip in ipList)
                 {
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
-                }
+                    //ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
+                    //Task t = new Task(() => TryToGetServant(ip));
+                    //t.Start();
+
+                    //Task.Factory.StartNew(() => TryToGetServant(ip));
+
+                    SocUnity su = new SocUnity();
+
+                    
+
+                    Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
+
+                    task.ContinueWith(unit =>
+                    {
+                        if(unit.Result == 1)
+                            SocUnityList.Add(su);
+                        //else 根据错误码做相应处理
+            
+                    });
+
+
+                    //Task.Factory.StartNew(t);
+                    //TryToGetServant(ip);
+
+                    //Thread t = new Thread(new ThreadStart(() =>
+                    //{
+                    //TryToGetServant(ip);
+                    //}));
+                    //t.Start();
+               }
                 
                 SocUnity.SocketReconnected += new SocUnity.SocketReconnected_Event_Handler(ServantReconnectedEvent);
             });
@@ -143,6 +224,9 @@ namespace ProjectS
             MessageBox.Show("SocketReconnectedEvent ip: " + ip);
         }
 
+        // 尝试与 Servant 进行连接，无论连接成功与否 新建的SocUnity都会加入到SocUnityList中，用于后期维护。
+        //
+        // 关于还未连接完成的 SocUnity 的后续处理目前任在建设中。
         private void TryToGetServant(Object str)
         {
             try
@@ -178,6 +262,7 @@ namespace ProjectS
             switch(mode_code)
             {
                 case Main.MASTER_MODE:
+                    DebugForm.DMes("Master Mode");
                     SocketReset();
                     MasterMode();
                     break;

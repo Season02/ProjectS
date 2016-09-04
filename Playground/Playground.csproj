@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A782F76C-841F-4324-BEEF-4478590C722F}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Playground</RootNamespace>
+    <AssemblyName>Playground</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="JsonConveter\Bson\BsonBinaryType.cs" />
+    <Compile Include="JsonConveter\Bson\BsonBinaryWriter.cs" />
+    <Compile Include="JsonConveter\Bson\BsonObjectId.cs" />
+    <Compile Include="JsonConveter\Bson\BsonReader.cs" />
+    <Compile Include="JsonConveter\Bson\BsonToken.cs" />
+    <Compile Include="JsonConveter\Bson\BsonType.cs" />
+    <Compile Include="JsonConveter\Bson\BsonWriter.cs" />
+    <Compile Include="JsonConveter\ConstructorHandling.cs" />
+    <Compile Include="JsonConveter\Conveters\BinaryConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\BsonObjectIdConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\CustomCreationConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\DataSetConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\DataTableConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\DateTimeConverterBase.cs" />
+    <Compile Include="JsonConveter\Conveters\DiscriminatedUnionConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\EntityKeyMemberConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\ExpandoObjectConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\IsoDateTimeConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\JavaScriptDateTimeConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\JsonValueConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\KeyValuePairConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\RegexConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\StringEnumConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\VersionConverter.cs" />
+    <Compile Include="JsonConveter\Conveters\XmlNodeConverter.cs" />
+    <Compile Include="JsonConveter\DateFormatHandling.cs" />
+    <Compile Include="JsonConveter\DateParseHandling.cs" />
+    <Compile Include="JsonConveter\DateTimeZoneHandling.cs" />
+    <Compile Include="JsonConveter\DefaultValueHandling.cs" />
+    <Compile Include="JsonConveter\FloatFormatHandling.cs" />
+    <Compile Include="JsonConveter\FloatParseHandling.cs" />
+    <Compile Include="JsonConveter\FormatterAssemblyStyle.cs" />
+    <Compile Include="JsonConveter\Formatting.cs" />
+    <Compile Include="JsonConveter\IArrayPool.cs" />
+    <Compile Include="JsonConveter\IJsonLineInfo.cs" />
+    <Compile Include="JsonConveter\JsonArrayAttribute.cs" />
+    <Compile Include="JsonConveter\JsonConstructorAttribute.cs" />
+    <Compile Include="JsonConveter\JsonContainerAttribute.cs" />
+    <Compile Include="JsonConveter\JsonConvert.cs" />
+    <Compile Include="JsonConveter\JsonConverter.cs" />
+    <Compile Include="JsonConveter\JsonConverterAttribute.cs" />
+    <Compile Include="JsonConveter\JsonConverterCollection.cs" />
+    <Compile Include="JsonConveter\JsonDictionaryAttribute.cs" />
+    <Compile Include="JsonConveter\JsonException.cs" />
+    <Compile Include="JsonConveter\JsonExtensionDataAttribute.cs" />
+    <Compile Include="JsonConveter\JsonIgnoreAttribute.cs" />
+    <Compile Include="JsonConveter\JsonObjectAttribute.cs" />
+    <Compile Include="JsonConveter\JsonPosition.cs" />
+    <Compile Include="JsonConveter\JsonPropertyAttribute.cs" />
+    <Compile Include="JsonConveter\JsonReader.cs" />
+    <Compile Include="JsonConveter\JsonReaderException.cs" />
+    <Compile Include="JsonConveter\JsonRequiredAttribute.cs" />
+    <Compile Include="JsonConveter\JsonSerializationException.cs" />
+    <Compile Include="JsonConveter\JsonSerializer.cs" />
+    <Compile Include="JsonConveter\JsonSerializerSettings.cs" />
+    <Compile Include="JsonConveter\JsonTextReader.cs" />
+    <Compile Include="JsonConveter\JsonTextWriter.cs" />
+    <Compile Include="JsonConveter\JsonToken.cs" />
+    <Compile Include="JsonConveter\JsonValidatingReader.cs" />
+    <Compile Include="JsonConveter\JsonWriter.cs" />
+    <Compile Include="JsonConveter\JsonWriterException.cs" />
+    <Compile Include="JsonConveter\Linq\CommentHandling.cs" />
+    <Compile Include="JsonConveter\Linq\Extensions.cs" />
+    <Compile Include="JsonConveter\Linq\IJEnumerable.cs" />
+    <Compile Include="JsonConveter\Linq\JArray.cs" />
+    <Compile Include="JsonConveter\Linq\JConstructor.cs" />
+    <Compile Include="JsonConveter\Linq\JContainer.cs" />
+    <Compile Include="JsonConveter\Linq\JEnumerable.cs" />
+    <Compile Include="JsonConveter\Linq\JObject.cs" />
+    <Compile Include="JsonConveter\Linq\JProperty.cs" />
+    <Compile Include="JsonConveter\Linq\JPropertyDescriptor.cs" />
+    <Compile Include="JsonConveter\Linq\JPropertyKeyedCollection.cs" />
+    <Compile Include="JsonConveter\Linq\JRaw.cs" />
+    <Compile Include="JsonConveter\Linq\JsonLoadSettings.cs" />
+    <Compile Include="JsonConveter\Linq\JsonMergeSettings.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\ArrayIndexFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\ArrayMultipleIndexFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\ArraySliceFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\FieldFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\FieldMultipleFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\JPath.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\PathFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\QueryExpression.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\QueryFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JsonPath\ScanFilter.cs" />
+    <Compile Include="JsonConveter\Linq\JToken.cs" />
+    <Compile Include="JsonConveter\Linq\JTokenEqualityComparer.cs" />
+    <Compile Include="JsonConveter\Linq\JTokenReader.cs" />
+    <Compile Include="JsonConveter\Linq\JTokenType.cs" />
+    <Compile Include="JsonConveter\Linq\JTokenWriter.cs" />
+    <Compile Include="JsonConveter\Linq\JValue.cs" />
+    <Compile Include="JsonConveter\Linq\MergeArrayHandling.cs" />
+    <Compile Include="JsonConveter\Linq\MergeNullValueHandling.cs" />
+    <Compile Include="JsonConveter\MemberSerialization.cs" />
+    <Compile Include="JsonConveter\MetadataPropertyHandling.cs" />
+    <Compile Include="JsonConveter\MissingMemberHandling.cs" />
+    <Compile Include="JsonConveter\NullValueHandling.cs" />
+    <Compile Include="JsonConveter\ObjectCreationHandling.cs" />
+    <Compile Include="JsonConveter\PreserveReferencesHandling.cs" />
+    <Compile Include="JsonConveter\ReferenceLoopHandling.cs" />
+    <Compile Include="JsonConveter\Required.cs" />
+    <Compile Include="JsonConveter\Schema\Extensions.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchema.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaBuilder.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaConstants.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaException.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaGenerator.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaModel.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaModelBuilder.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaNode.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaNodeCollection.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaResolver.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaType.cs" />
+    <Compile Include="JsonConveter\Schema\JsonSchemaWriter.cs" />
+    <Compile Include="JsonConveter\Schema\UndefinedSchemaIdHandling.cs" />
+    <Compile Include="JsonConveter\Schema\ValidationEventArgs.cs" />
+    <Compile Include="JsonConveter\Schema\ValidationEventHandler.cs" />
+    <Compile Include="JsonConveter\SerializationBinder.cs" />
+    <Compile Include="JsonConveter\Serialization\CachedAttributeGetter.cs" />
+    <Compile Include="JsonConveter\Serialization\CamelCaseNamingStrategy.cs" />
+    <Compile Include="JsonConveter\Serialization\CamelCasePropertyNamesContractResolver.cs" />
+    <Compile Include="JsonConveter\Serialization\DefaultContractResolver.cs" />
+    <Compile Include="JsonConveter\Serialization\DefaultNamingStrategy.cs" />
+    <Compile Include="JsonConveter\Serialization\DefaultReferenceResolver.cs" />
+    <Compile Include="JsonConveter\Serialization\DefaultSerializationBinder.cs" />
+    <Compile Include="JsonConveter\Serialization\DiagnosticsTraceWriter.cs" />
+    <Compile Include="JsonConveter\Serialization\DynamicValueProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\ErrorContext.cs" />
+    <Compile Include="JsonConveter\Serialization\ErrorEventArgs.cs" />
+    <Compile Include="JsonConveter\Serialization\ExpressionValueProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\IAttributeProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\IContractResolver.cs" />
+    <Compile Include="JsonConveter\Serialization\IReferenceResolver.cs" />
+    <Compile Include="JsonConveter\Serialization\ITraceWriter.cs" />
+    <Compile Include="JsonConveter\Serialization\IValueProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonArrayContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonContainerContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonDictionaryContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonDynamicContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonFormatterConverter.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonISerializableContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonLinqContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonObjectContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonPrimitiveContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonProperty.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonPropertyCollection.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonSerializerInternalBase.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonSerializerInternalReader.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonSerializerInternalWriter.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonSerializerProxy.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonStringContract.cs" />
+    <Compile Include="JsonConveter\Serialization\JsonTypeReflector.cs" />
+    <Compile Include="JsonConveter\Serialization\MemoryTraceWriter.cs" />
+    <Compile Include="JsonConveter\Serialization\NamingStrategy.cs" />
+    <Compile Include="JsonConveter\Serialization\ObjectConstructor.cs" />
+    <Compile Include="JsonConveter\Serialization\OnErrorAttribute.cs" />
+    <Compile Include="JsonConveter\Serialization\ReflectionAttributeProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\ReflectionValueProvider.cs" />
+    <Compile Include="JsonConveter\Serialization\SnakeCaseNamingStrategy.cs" />
+    <Compile Include="JsonConveter\Serialization\TraceJsonReader.cs" />
+    <Compile Include="JsonConveter\Serialization\TraceJsonWriter.cs" />
+    <Compile Include="JsonConveter\StringEscapeHandling.cs" />
+    <Compile Include="JsonConveter\TraceLevel.cs" />
+    <Compile Include="JsonConveter\TypeNameHandling.cs" />
+    <Compile Include="JsonConveter\Utiltites\Base64Encoder.cs" />
+    <Compile Include="JsonConveter\Utiltites\BidirectionalDictionary.cs" />
+    <Compile Include="JsonConveter\Utiltites\CollectionUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\CollectionWrapper.cs" />
+    <Compile Include="JsonConveter\Utiltites\ConvertUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\DateTimeParser.cs" />
+    <Compile Include="JsonConveter\Utiltites\DateTimeUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\DictionaryWrapper.cs" />
+    <Compile Include="JsonConveter\Utiltites\DynamicProxy.cs" />
+    <Compile Include="JsonConveter\Utiltites\DynamicProxyMetaObject.cs" />
+    <Compile Include="JsonConveter\Utiltites\DynamicReflectionDelegateFactory.cs" />
+    <Compile Include="JsonConveter\Utiltites\DynamicUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\EnumUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\EnumValue.cs" />
+    <Compile Include="JsonConveter\Utiltites\ExpressionReflectionDelegateFactory.cs" />
+    <Compile Include="JsonConveter\Utiltites\FSharpUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\ILGeneratorExtensions.cs" />
+    <Compile Include="JsonConveter\Utiltites\ImmutableCollectionsUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\JavaScriptUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\JsonTokenUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\LateBoundReflectionDelegateFactory.cs" />
+    <Compile Include="JsonConveter\Utiltites\LinqBridge.cs" />
+    <Compile Include="JsonConveter\Utiltites\MathUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\MethodCall.cs" />
+    <Compile Include="JsonConveter\Utiltites\MiscellaneousUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\PropertyNameTable.cs" />
+    <Compile Include="JsonConveter\Utiltites\ReflectionDelegateFactory.cs" />
+    <Compile Include="JsonConveter\Utiltites\ReflectionObject.cs" />
+    <Compile Include="JsonConveter\Utiltites\ReflectionUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\StringBuffer.cs" />
+    <Compile Include="JsonConveter\Utiltites\StringReference.cs" />
+    <Compile Include="JsonConveter\Utiltites\StringUtils.cs" />
+    <Compile Include="JsonConveter\Utiltites\ThreadSafeStore.cs" />
+    <Compile Include="JsonConveter\Utiltites\TypeExtensions.cs" />
+    <Compile Include="JsonConveter\Utiltites\ValidationUtils.cs" />
+    <Compile Include="JsonConveter\WriteState.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -149,19 +149,19 @@ namespace ProjectS
                             break;
 
                         case (int)Keys.D:
-                            //if (!dform_on)
-                            //{
-                            //    dform_on = true;
-                            //    dform.Show();
-                            //}
-                            //else
-                            //{
-                            //    dform.Hide();
-                            //    dform_on = false;
-                            //}
+                            if (!dform_on)
+                            {
+                                dform_on = true;
+                                dform.Show();
+                            }
+                            else
+                            {
+                                dform.Hide();
+                                dform_on = false;
+                            }
 
-                            SelectForm sf = new SelectForm();
-                            sf.Show();
+                        //////SelectForm sf = new SelectForm();
+                        //    sf.Show();
                                 
                             break;
 
@@ -193,7 +193,11 @@ namespace ProjectS
                     {
                         on_master_mode = true;
                         fmm = new FormMasterMode();
+
+                        fmm.SocketMonitor = psm;
+                        
                         fmm.ShowDialog();
+                        //一下代码会被阻塞
                         fmm.Dispose();
                         fmm = null;
                         on_master_mode = false;

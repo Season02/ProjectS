@@ -8,11 +8,33 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Sockets;
+using ProjectS.Forms;
 
 namespace ProjectS
 {
     public partial class FormMasterMode : Form
     {
+        /// <summary>
+        /// 用来与 SocketUtils 通信
+        /// </summary>
+        private ProcessSocketMonitor socketMonitor;
+
+        /// <summary>
+        /// 似乎设置前应该确认下是否为 NULL 但现在还没有切换到Servant 会清除此值得设定就
+        /// 先不管了 ///三连击
+        /// </summary>
+        public ProcessSocketMonitor SocketMonitor
+        {
+            set
+            {
+                socketMonitor = value;
+            }
+            //get
+            //{
+            //    return data;
+            //}
+        }
+
         public FormMasterMode()
         {
             InitializeComponent();
@@ -87,7 +109,7 @@ namespace ProjectS
                     {
                         if (item.Text.Equals(ip))
                         {
-                            item.SubItems[0].Text = status;
+                            item.SubItems[1].Text = status;
                             break;
                         }
                     }
@@ -103,5 +125,33 @@ namespace ProjectS
         }
 
 
+        /// <summary>
+        /// 发送流什么的目前没有这方面想法，简单粗暴的把 SocketUtil 传递给
+        /// Control Panel 就OK
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ServantLv_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ServantLv.SelectedItems.Count > 0)
+            {
+                //string tmp = ServantLv.SelectedItems[0].Text;
+                //// MessageBox.Show(tmp);
+
+                
+
+                var su = socketMonitor.SearchSocketUnity(ServantLv.SelectedItems[0].Text);
+
+                if(null != su)
+                {
+                    ////获取到SOCKET,传递给 CPF
+
+                    ControlPanelForm cpf = new ControlPanelForm();
+                    cpf.Unity = su;
+                    cpf.ShowDialog();
+                }
+
+            }
+        }
     }
 }
