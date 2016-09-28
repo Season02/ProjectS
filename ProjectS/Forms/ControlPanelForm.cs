@@ -38,12 +38,9 @@ namespace ProjectS.Forms
             InitializeComponent();
         }
 
-        private void TestBtn_1_Click(object sender, EventArgs e)
+        private void bto0x11_Click(object sender, EventArgs e)
         {
-            if(unity != null)
-            {
-                MessageBox.Show(unity.Ip);
-            }
+            unity.SendByteCommand(0x11, null);
         }
     }
 }

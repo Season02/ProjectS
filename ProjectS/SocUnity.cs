@@ -10,6 +10,8 @@ using System.Windows.Forms;
 
 using Newtonsoft.Json;
 
+using ProjectS.CommonClasses.Util;
+
 namespace ProjectS
 {
     //SOCKET HELPER
@@ -36,8 +38,6 @@ namespace ProjectS
 
         //32位最大能一次表达4G的文件，现在不会一次发送传送超过这个量级
         private int DefaultBufferSize = 1024;
-
-        public const String JSON_CONST_STATE_SUCCESS = "SUCCESS";
 
         public int ErrorCodeConnect
         {
@@ -343,45 +343,48 @@ namespace ProjectS
         /// </summary>
         /// <param name="index"></param>
         /// <param name="data"></param>
-        public void Send(DelegateSendDone doneDelegate, byte[] data)
+        public void SendByteCommand(byte command, DelegateSendDone doneDelegate)
         {
             Task<int> task = Task<int>.Factory.StartNew(() =>
             {
                 if (socket.Connected != true)
                     return -1;
 
-                var serize = new Dictionary<String, object>();
-                serize.Add("type", "byte_command");
-                serize.Add("total_count", "1");
-                serize.Add("current_index", "0");
-                serize.Add("data", data);
+                ////var serize = new Dictionary<String, object>();
+                ////serize.Add("type", "byte_command");
+                ////serize.Add("total_count", "1");
+                ////serize.Add("current_index", "0");
+                ////serize.Add("data", data);
 
-                string json = JsonConvert.SerializeObject(serize);
-                var buffer = Encoding.UTF8.GetBytes(json);
+                ////string json = JsonConvert.SerializeObject(serize);
+                ////var buffer = Encoding.UTF8.GetBytes(json);
 
                 byte[] returnBuffer = new byte[DefaultBufferSize];
 
                 try
                 {
+                    byte[] readyToSend = StreamUnity.CreateByteCommandPackage(command);
+                    DebugForm.DMes("package length: " + readyToSend.Length);
+
                     //sendBuffer[index] = data;
-                    socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, null, null);
+                    socket.Send(readyToSend, 0, DefaultBufferSize, SocketFlags.None);
 
                     //超过两秒会异常，之后的逻辑处理可以有SOCKET状态检查，或者其他的
                     socket.Receive(returnBuffer);
                     //这里会阻塞两秒
-                    String returnBufferString = Encoding.UTF8.GetString(returnBuffer);
+                    //String returnBufferString = Encoding.UTF8.GetString(returnBuffer);
 
-                    Dictionary<string, string> htmlAttributes = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnBufferString);
-                    String returnState = htmlAttributes["state"];
+                    //Dictionary<string, string> htmlAttributes = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnBufferString);
+                    //String returnState = htmlAttributes["state"];
 
-                    if (returnState.Equals(JSON_CONST_STATE_SUCCESS))
+                    if (StreamUnity.CheckEchoStatus(returnBuffer))
                         return 1;
                     else
                         return 0;
                 }
                 catch (SocketException ex)
                 {
-                    MessageBox.Show(ex.Message + "\r\n From: socket.Send code: " + ex.ErrorCode);
+                    MessageBox.Show(ex.Message + "\r\n From: socket.SendByteCommand code: " + ex.ErrorCode);
                     return 0;
                 }
 
@@ -395,7 +398,6 @@ namespace ProjectS
             });
             
         }
-
 
         /// <summary>
         /// 发送体使用 TASK 或 THREAD 使用子线程操作，因为完成一次发送后需要等待
@@ -421,6 +423,13 @@ namespace ProjectS
         //    return -1;
         //}
 
+
+        /// <summary>
+        /// Socket 异步接受数据
+        /// 在收到数据后首先进行 包类型 检查，然后在做其他逻辑处理
+        /// 设计上希望能够接受文件与BYTE COMMAND 同时进行，要实现
+        /// 这个目标可能需要一个辅助类来帮助接收文件的处理
+        /// </summary>
         private void BeginReceiveCallback(IAsyncResult ar)
         {
             Socket socket;
@@ -429,6 +438,9 @@ namespace ProjectS
             {
                 socket = ar.AsyncState as Socket;
                 stream_length = socket.EndReceive(ar);
+
+                DebugForm.DMes("ip: " + ip + " data count: " + stream_length);
+
                 if (stream_length == 0)
                 {
                     SocketConnectionLost(this, this.socket, ip);
@@ -444,161 +456,24 @@ namespace ProjectS
                 return;
             }
 
-            //int length_bytes = StreamBuffer.Length;
-            //byte[] stream = StreamBuffer;
+            Unity unity = StreamUnity.UnityComeTransform(StreamBuffer);
 
-            // fixed: head length 32byte; contain : this packet type[4byte],this packet data length[4](contain head),data
-            // behind is a packet framework :type + length + data  and then depend on type the section data will change
-            // example: 
-                //1,type code command : type 1,length 36byte data 4byte , will do command by data code
-                //2,type cmd command : type 2 length xxbyte data xx-32 byte, will excute command as data is
-                //3,tyoe transfer file: type 3 ,length xxbyte data xx-32byte ,data are seprated as [new buffer size][packge count][last packge size][file name]...
-                //and will prepare for receice the new file,when get the second pacekt,check the type,if not 4,we got a error,if yes,then receive file
-                //4,etc...
-
-            int type = Byte2Int(StreamBuffer, 0);
-            int length = Byte2Int(StreamBuffer, 1);
-            byte[] data = new byte[length - HEAD_LENGTH];
-            Array.Copy(StreamBuffer, HEAD_LENGTH, data, 0, data.Length);
-            MessageBox.Show("stream_length: " + stream_length + " length: " + length);
-
-            switch(type)
+            switch(unity.Type)
             {
-                case 100://clasic byte command
-                    Thread t = new Thread(new ThreadStart(() =>
+                case Unity.Package_Type_ByteCommand:
+
+                    Task.Run(() =>
                     {
                         ByteCommand bc = new ByteCommand(socket);
-                        bc.Execute(data);
-                    }));
-                    t.IsBackground = true;
-                    t.Start();
+                        bc.Execute(unity.Data, unity.DataExtra);
+                    });
                     break;
 
                 default:
                     break;
             }
 
-            if (1 < 0)
-            {
-                // 现在尽量采用 字符 判断方式
-                switch (3)
-                {
-                    case 1://CMD Comand
-                        try
-                        {
-                            //byte[] temp = new byte[length_bytes - STREAM_HEAD_LENGTH];
-                            //Array.Copy(stream, 16, temp, 0, temp.Length);
-                            //String str = System.Text.Encoding.UTF8.GetString(temp).TrimEnd();
-
-                            //MessageBox.Show("Start a Process: " + str);
-                            //System.Diagnostics.Process.Start(str);
-                        }
-                        catch (Exception e)
-                        {
-                            MessageBox.Show(e.Message);
-                        }
-
-                        break;
-
-                    case 2://Prepare file receive
-                        //try
-                        //{
-                        //    if (Transfering == false)
-                        //    {
-                        //        bufferSize = getHead(StreamBuffer, 4);
-                        //        int size = 0;
-                        //        for (int i = STREAM_HEAD_LENGTH + 4; i < stream.Length; i++)//extract the length of file name ,have a question
-                        //        {
-                        //            if (stream[i] == 0)
-                        //                break;
-                        //            size++;
-                        //        }
-                        //        byte[] temp = new byte[size];
-                        //        Array.Copy(stream, (STREAM_HEAD_LENGTH + 4), temp, 0, temp.Length);
-                        //        fileName = System.Text.Encoding.UTF8.GetString(temp).Trim();
-                        //        loopCount = 0;
-                        //        Transfering = true;
-
-                        //        MessageBox.Show("buffer size: " + bufferSize.ToString() + " bit file name: " + fileName);
-                        //        Thread.Sleep(200);//I really really have no idea why need this
-                        //        MyFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
-                        //        setStreamSize(bufferSize + STREAM_HEAD_LENGTH);
-                        //        LogBuilder.buildLog("file [ " + fileName + " ] start receving.");
-                        //    }
-
-                        //}
-                        //catch (Exception e)
-                        //{
-                        //    //MessageBox.Show(e.Message);
-                        //    LogBuilder.buildLog("Prepare file receive Error: " + e.Message);
-                        //    Transfering = false;
-                        //}
-
-                        break;
-
-                    case 3://file reveiving
-                        //try
-                        //{
-                        //    if (getHead(stream, 1) != loopCount)
-                        //    {
-                        //        MyFileStream.Write(StreamBuffer, STREAM_HEAD_LENGTH, StreamBufferSize - STREAM_HEAD_LENGTH);
-                        //        MyFileStream.Flush(true);//must be true,i don't know why
-                        //    }
-                        //    else
-                        //    {
-                        //        if (getHead(stream, 3) > 0)
-                        //        {
-                        //            MyFileStream.Write(stream, STREAM_HEAD_LENGTH, getHead(stream, 3) - STREAM_HEAD_LENGTH);
-                        //            MyFileStream.Flush(true);
-                        //        }
-                        //        else
-                        //        {
-                        //            MyFileStream.Write(stream, STREAM_HEAD_LENGTH, stream.Length - STREAM_HEAD_LENGTH);
-                        //            MyFileStream.Flush(true);
-                        //        }
-
-                        //        System.Media.SystemSounds.Hand.Play();
-                        //        LogBuilder.buildLog("Received Successful: " + fileName + "packet count: " + loopCount + "Last packet size: " + getHead(StreamBuffer, 3));
-                        //        MyFileStream.Close();
-                        //        setStreamSize(1024);
-
-                        //        fileName = "";
-                        //        SocketComHelper.transmitCommand(socket, MK_FLAG_FILE_RECEIVED, null);
-                        //        MessageBox.Show("FILE RECEIVED!");
-                        //        Transfering = false;
-                        //        //////////////SEND FEEDBACK TO SENDER!//////////////////
-
-                        //    }
-
-                        //    ++loopCount;
-                        //}
-                        //catch (Exception e)
-                        //{
-                        //    MyFileStream.Close();
-                        //    setStreamSize(1024);
-                        //    Transfering = false;
-                        //    MessageBox.Show("err MyFileStream.Write: " + e.Message);
-                        //    LogBuilder.buildLog("err MyFileStream.Write: " + e.Message);
-                        //}
-
-                        break;
-                }
-            }
-            //else
-            //{
-            //    if (length_bytes == 1024)
-            //    {
-            //        //Thread t = new Thread(new ThreadStart(() =>
-            //        //{
-            //        //    beControl(stream);
-            //        //}));
-            //        //t.IsBackground = true;
-            //        //t.Start();
-            //    }
-
-            //}
-
-            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
+            socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);           
             
         }
 
@@ -696,6 +571,187 @@ namespace ProjectS
             //MessageBox.Show("ServerModeCallback");
             socket.BeginAccept(new AsyncCallback(ServerModeCallback), socket);
         }
+
+        //private void BeginReceiveCallback(IAsyncResult ar)
+        //{
+        //    Socket socket;
+        //    int stream_length;
+        //    try
+        //    {
+        //        socket = ar.AsyncState as Socket;
+        //        stream_length = socket.EndReceive(ar);
+        //        if (stream_length == 0)
+        //        {
+        //            SocketConnectionLost(this, this.socket, ip);
+        //            DebugForm.DMes("BeginReceiveCallback error ip: " + ip + " EndReceive by zero!");
+        //            MessageBox.Show(ip + " EndReceive by zero!");
+        //            return;
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        MessageBox.Show("BeginReceiveCallback err ip:" + ip + "message:" + e.Message + "\nthread :" + Thread.CurrentThread);
+        //        SocketConnectionLost(this, this.socket, ip);
+        //        return;
+        //    }
+
+        //    //int length_bytes = StreamBuffer.Length;
+        //    //byte[] stream = StreamBuffer;
+
+        //    // fixed: head length 32byte; contain : this packet type[4byte],this packet data length[4](contain head),data
+        //    // behind is a packet framework :type + length + data  and then depend on type the section data will change
+        //    // example: 
+        //    //1,type code command : type 1,length 36byte data 4byte , will do command by data code
+        //    //2,type cmd command : type 2 length xxbyte data xx-32 byte, will excute command as data is
+        //    //3,tyoe transfer file: type 3 ,length xxbyte data xx-32byte ,data are seprated as [new buffer size][packge count][last packge size][file name]...
+        //    //and will prepare for receice the new file,when get the second pacekt,check the type,if not 4,we got a error,if yes,then receive file
+        //    //4,etc...
+
+        //    int type = Byte2Int(StreamBuffer, 0);
+        //    int length = Byte2Int(StreamBuffer, 1);
+        //    byte[] data = new byte[length - HEAD_LENGTH];
+        //    Array.Copy(StreamBuffer, HEAD_LENGTH, data, 0, data.Length);
+        //    MessageBox.Show("stream_length: " + stream_length + " length: " + length);
+
+        //    switch (type)
+        //    {
+        //        case 100://clasic byte command
+        //            Thread t = new Thread(new ThreadStart(() =>
+        //            {
+        //                ByteCommand bc = new ByteCommand(socket);
+        //                bc.Execute(data);
+        //            }));
+        //            t.IsBackground = true;
+        //            t.Start();
+        //            break;
+
+        //        default:
+        //            break;
+        //    }
+
+        //    if (1 < 0)
+        //    {
+        //        // 现在尽量采用 字符 判断方式
+        //        switch (3)
+        //        {
+        //            case 1://CMD Comand
+        //                try
+        //                {
+        //                    //byte[] temp = new byte[length_bytes - STREAM_HEAD_LENGTH];
+        //                    //Array.Copy(stream, 16, temp, 0, temp.Length);
+        //                    //String str = System.Text.Encoding.UTF8.GetString(temp).TrimEnd();
+
+        //                    //MessageBox.Show("Start a Process: " + str);
+        //                    //System.Diagnostics.Process.Start(str);
+        //                }
+        //                catch (Exception e)
+        //                {
+        //                    MessageBox.Show(e.Message);
+        //                }
+
+        //                break;
+
+        //            case 2://Prepare file receive
+        //                //try
+        //                //{
+        //                //    if (Transfering == false)
+        //                //    {
+        //                //        bufferSize = getHead(StreamBuffer, 4);
+        //                //        int size = 0;
+        //                //        for (int i = STREAM_HEAD_LENGTH + 4; i < stream.Length; i++)//extract the length of file name ,have a question
+        //                //        {
+        //                //            if (stream[i] == 0)
+        //                //                break;
+        //                //            size++;
+        //                //        }
+        //                //        byte[] temp = new byte[size];
+        //                //        Array.Copy(stream, (STREAM_HEAD_LENGTH + 4), temp, 0, temp.Length);
+        //                //        fileName = System.Text.Encoding.UTF8.GetString(temp).Trim();
+        //                //        loopCount = 0;
+        //                //        Transfering = true;
+
+        //                //        MessageBox.Show("buffer size: " + bufferSize.ToString() + " bit file name: " + fileName);
+        //                //        Thread.Sleep(200);//I really really have no idea why need this
+        //                //        MyFileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+        //                //        setStreamSize(bufferSize + STREAM_HEAD_LENGTH);
+        //                //        LogBuilder.buildLog("file [ " + fileName + " ] start receving.");
+        //                //    }
+
+        //                //}
+        //                //catch (Exception e)
+        //                //{
+        //                //    //MessageBox.Show(e.Message);
+        //                //    LogBuilder.buildLog("Prepare file receive Error: " + e.Message);
+        //                //    Transfering = false;
+        //                //}
+
+        //                break;
+
+        //            case 3://file reveiving
+        //                //try
+        //                //{
+        //                //    if (getHead(stream, 1) != loopCount)
+        //                //    {
+        //                //        MyFileStream.Write(StreamBuffer, STREAM_HEAD_LENGTH, StreamBufferSize - STREAM_HEAD_LENGTH);
+        //                //        MyFileStream.Flush(true);//must be true,i don't know why
+        //                //    }
+        //                //    else
+        //                //    {
+        //                //        if (getHead(stream, 3) > 0)
+        //                //        {
+        //                //            MyFileStream.Write(stream, STREAM_HEAD_LENGTH, getHead(stream, 3) - STREAM_HEAD_LENGTH);
+        //                //            MyFileStream.Flush(true);
+        //                //        }
+        //                //        else
+        //                //        {
+        //                //            MyFileStream.Write(stream, STREAM_HEAD_LENGTH, stream.Length - STREAM_HEAD_LENGTH);
+        //                //            MyFileStream.Flush(true);
+        //                //        }
+
+        //                //        System.Media.SystemSounds.Hand.Play();
+        //                //        LogBuilder.buildLog("Received Successful: " + fileName + "packet count: " + loopCount + "Last packet size: " + getHead(StreamBuffer, 3));
+        //                //        MyFileStream.Close();
+        //                //        setStreamSize(1024);
+
+        //                //        fileName = "";
+        //                //        SocketComHelper.transmitCommand(socket, MK_FLAG_FILE_RECEIVED, null);
+        //                //        MessageBox.Show("FILE RECEIVED!");
+        //                //        Transfering = false;
+        //                //        //////////////SEND FEEDBACK TO SENDER!//////////////////
+
+        //                //    }
+
+        //                //    ++loopCount;
+        //                //}
+        //                //catch (Exception e)
+        //                //{
+        //                //    MyFileStream.Close();
+        //                //    setStreamSize(1024);
+        //                //    Transfering = false;
+        //                //    MessageBox.Show("err MyFileStream.Write: " + e.Message);
+        //                //    LogBuilder.buildLog("err MyFileStream.Write: " + e.Message);
+        //                //}
+
+        //                break;
+        //        }
+        //    }
+        //    //else
+        //    //{
+        //    //    if (length_bytes == 1024)
+        //    //    {
+        //    //        //Thread t = new Thread(new ThreadStart(() =>
+        //    //        //{
+        //    //        //    beControl(stream);
+        //    //        //}));
+        //    //        //t.IsBackground = true;
+        //    //        //t.Start();
+        //    //    }
+
+        //    //}
+
+        //    socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);
+
+        //}
 
     }
 }

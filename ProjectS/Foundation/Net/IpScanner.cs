@@ -9,7 +9,7 @@ using System.Net.Sockets;
 
 namespace ProjectS
 {
-    public class ipScan
+    public class IpScan
     {
         // Summary:
         //          预挑选的本地IP，挑选一个作为IP遍历的前缀
@@ -28,7 +28,7 @@ namespace ProjectS
 
         public int postbackIndex;
 
-        public ipScan()
+        public IpScan()
         {
             System.Threading.Thread t = new System.Threading.Thread(delegate()
             {
@@ -62,20 +62,69 @@ namespace ProjectS
             if(IpTable.Count() == 1)
             {
                 DebugForm.DMes("IpTale.Count == 1 : " + IpTable[0]);
-                return buidIpList(ipScan.IP_LIST_TYPE_TARGET, IpTable);
+                return buidIpList(IpScan.IP_LIST_TYPE_TARGET, IpTable);
             }
             else if(IpTable.Count() > 1)
             {
                 foreach (var ip in IpTable)
                     DebugForm.DMes("IpTale.Count > 1 : " + ip);
 
-                return buidIpList(ipScan.IP_LIST_TYPE_HOST, IpTable);
+                return buidIpList(IpScan.IP_LIST_TYPE_HOST, IpTable);
             }
             else
             {
                 return null;
             }
             
+        }
+
+        /// <summary>
+        /// 获取 进程 所在机器 所有 的IP地址
+        /// </summary>
+        /// <returns></returns>
+        public static IpList IpScanProceed()
+        {
+            System.Net.IPHostEntry myHost = new System.Net.IPHostEntry();
+            var list = new List<string>();
+
+            try
+            {
+                myHost = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());//得到本地主机的DNS信息
+                DebugForm.DMes("HostName: " + myHost.HostName.ToString());
+                DebugForm.DMes("IpScaning ");
+
+                foreach (var iptable in myHost.AddressList)//显示本地主机的IP地址表
+                {
+                    DebugForm.DMes("-> " + iptable);
+
+                    if (iptable.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                        continue;
+                    list.Add(iptable.ToString());
+                }
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
+
+            if (list.Count() == 1)
+            {
+                DebugForm.DMes("IpTale.Count == 1 : " + list[0]);
+
+                return new IpList(IpList.IP_LIST_TYPE_TARGET, list);
+            }
+            else if (list.Count() > 1)
+            {
+                foreach (var ip in list)
+                    DebugForm.DMes("IpTale.Count > 1 : " + ip);
+
+                return new IpList(IpList.IP_LIST_TYPE_HOST, list);
+            }
+            else
+            {
+                return null;
+            }
+
         }
 
         public static List<String> cutHead(List<String> list)
@@ -94,15 +143,15 @@ namespace ProjectS
             //check validation
             switch(listType)
             {
-                case ipScan.IP_LIST_TYPE_HOST:
+                case IpScan.IP_LIST_TYPE_HOST:
                     canditateIP = null;
                     canditateIP = hostIp;
-                    canditateIP.Insert(0, ipScan.IP_LIST_TYPE_HOST);
+                    canditateIP.Insert(0, IpScan.IP_LIST_TYPE_HOST);
                     
                     break;
 
-                case ipScan.IP_LIST_TYPE_TARGET:
-                    canditateIP.Add(ipScan.IP_LIST_TYPE_TARGET);
+                case IpScan.IP_LIST_TYPE_TARGET:
+                    canditateIP.Add(IpScan.IP_LIST_TYPE_TARGET);
 
                     string[] list = hostIp[0].Split('.');//Extract something
                     string strIPAddress = list[0] + "." + list[1] + "." + list[2] + ".";
@@ -119,6 +168,32 @@ namespace ProjectS
 
                 default:
                     return null;
+            }
+
+            return canditateIP;
+        }
+
+        // Summary:
+        //          如果 listType 为 IP_LIST_TYPE_HOST 那么说明本地有一个以上IP，需要挑选一个作为用来遍历目标机器的前缀;
+        //          如果 listType 为 IP_LIST_TYPE_TARGET 那么本机只有一个IP，可以直接用来遍历
+        /// <summary>
+        /// 从 1到254 生成IP清单
+        /// </summary>
+        /// <param name="hostIp"></param>
+        /// <returns></returns>
+        public static List<String> BuidIpList(string hostIp, int start = 1, int end = 254)
+        {
+            var canditateIP = new List<String>();
+
+            string[] list = hostIp.Split('.');//Extract something
+            string strIPAddress = list[0] + "." + list[1] + "." + list[2] + ".";
+
+            //int nStrat = Int32.Parse("1");//开始扫描地址 
+            //int nEnd = Int32.Parse("254");//终止扫描地址 
+
+            for (int i = start; i <= end; i++)//扫描的操作 
+            {
+                canditateIP.Add(strIPAddress + i.ToString());
             }
 
             return canditateIP;
@@ -226,4 +301,32 @@ namespace ProjectS
         //}
 
     }
+
+    public class IpList
+    {
+        
+        /// <summary>
+        /// 预挑选的本地IP，挑选一个作为IP遍历的前缀
+        /// </summary>
+        public const string IP_LIST_TYPE_HOST = "IP_LIST_TYPE_HOST";
+  
+        /// <summary>
+        /// 已选好的作为被遍历前缀的IP
+        /// </summary>
+        public const string IP_LIST_TYPE_TARGET = "IP_LIST_TYPE_TARGET";
+
+        private List<string> ip;
+        private string type;
+
+        public List<String> Ip { get { return ip; } }
+        public string Type { get { return type; } }
+
+        public IpList(string type, List<string> ip)
+        {
+            this.type = type;
+            this.ip = ip;
+        }
+
+    }
+
 }

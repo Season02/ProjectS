@@ -137,52 +137,63 @@ namespace ProjectS
             }
 
         }
-
-        // Summary:
-        //         控制模式 首先扫描本地IP地址表 筛选出 IP 前缀，然后进行全地址遍历尝试与所有可能的 Servant 进行
-        //         连接，按照设计对所有 可能的但又未能在本次遍历中连接到的Servant 会进行定时重连操作。
-        //
-        // Tip:
-        //         关于自动重连，由于SocUnity自身对Socket中的 Client 模式有自动重连的功能，所以在 ProcessSocketMonitor 
-        //         中 只需要监听 SocUnity 的重连事件，然后做相应处理。
+      
         public static int public_index = -1;
+        /// <summary>
+        /// 控制模式 首先扫描本地IP地址表 筛选出 IP 前缀，然后进行全地址遍历尝试与所有可能的 Servant 进行
+        /// 连接，按照设计对所有 可能的但又未能在本次遍历中连接到的Servant 会进行定时重连操作。
+        /// 
+        /// 关于自动重连，由于SocUnity自身对Socket中的 Client 模式有自动重连的功能，所以在 ProcessSocketMonitor
+        /// 中 只需要监听 SocUnity 的重连事件，然后做相应处理。
+        /// </summary>
+        /// <returns></returns>
         private Task MasterMode()
         {
             on_master_mode = true;
 
             return Task.Run(() =>
             {
-                List<String> ipList = ipScan.ipScanProceed();
+                IpList list = IpScan.IpScanProceed();
+                List<string> tryList;
+                //List<String> ipList = IpScan.ipScanProceed();
 
-                switch (ipList[0])
+                //ipList.Clear();
+                //ipList.Add(IpScan.IP_LIST_TYPE_TARGET);
+                //ipList.Add("127.0.0.1");
+
+                //switch (ipList[0])
+                switch (list.Type)
                 {
                     //不止一个本地IP，需要挑选
-                    case ipScan.IP_LIST_TYPE_HOST:
-                        ipList.RemoveAt(0);
+                    case IpList.IP_LIST_TYPE_HOST:
+                        //ipList.RemoveAt(0);
 
                         SelectForm sf = new SelectForm();
-                        sf.AddData(ipList);
+                        sf.AddData(list.Ip);
                         sf.ShowDialog();
                         
-                        String tmp = ipList[public_index];
+                        String tmp = list.Ip[public_index];
 
-                        ipList.Clear();
-                        ipList.Add(tmp);
+                        //ipList.Clear();
+                        //ipList.Add(tmp);
 
-                        ipList = ipScan.buidIpList(ipScan.IP_LIST_TYPE_TARGET, ipList);
+                        tryList = IpScan.BuidIpList(tmp);
 
                         break;
 
                     //遍历完成，直接使用
-                    case ipScan.IP_LIST_TYPE_TARGET:
-                        ipList.RemoveAt(0);
+                    //  现在，我觉得上面一句有问题，不能直接使用，要遍历
+                    case IpList.IP_LIST_TYPE_TARGET:
+                        //ipList.RemoveAt(0);
+                        tryList = IpScan.BuidIpList(list.Ip[0]);
+
                         break;
 
                     default:
                         return;
                 }
 
-                foreach (var ip in ipList)
+                foreach (var ip in tryList)
                 {
                     //ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
                     //Task t = new Task(() => TryToGetServant(ip));

@@ -82,12 +82,21 @@ namespace Playground
             });
         }
         
-        /**////             /// Synchronous method             ///             ///         public string Run()
+        /**//// 
+            /// Synchronous method 
+            /// 
+            /// 
+        public string Run()
         {
             return "My name is " + m_Name;
         }
 
-        /**////             /// Asynchronous end method             ///             ///             ///         public string EndRun(IAsyncResult ar)
+        /**//// 
+            /// Asynchronous end method 
+            /// 
+            /// 
+            /// 
+        public string EndRun(IAsyncResult ar)
         {
             if (ar == null)
                 throw new NullReferenceException("Arggument ar can't be null");
@@ -103,7 +112,13 @@ namespace Playground
             }
         }
         
-        /**////             /// Asynchronous begin method             ///             ///             ///             ///         public IAsyncResult BeginRun(AsyncCallback callBack, Object stateObject)
+        /**//// 
+            /// Asynchronous begin method 
+            /// 
+            /// 
+            /// 
+            /// 
+        public IAsyncResult BeginRun(AsyncCallback callBack, Object stateObject)
         {
             try
             {

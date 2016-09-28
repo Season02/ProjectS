@@ -28,25 +28,25 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.TestBtn_1 = new System.Windows.Forms.Button();
+            this.bto0x11 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // TestBtn_1
+            // bto0x11
             // 
-            this.TestBtn_1.Location = new System.Drawing.Point(98, 103);
-            this.TestBtn_1.Name = "TestBtn_1";
-            this.TestBtn_1.Size = new System.Drawing.Size(75, 23);
-            this.TestBtn_1.TabIndex = 0;
-            this.TestBtn_1.Text = "Test 1";
-            this.TestBtn_1.UseVisualStyleBackColor = true;
-            this.TestBtn_1.Click += new System.EventHandler(this.TestBtn_1_Click);
+            this.bto0x11.Location = new System.Drawing.Point(98, 103);
+            this.bto0x11.Name = "bto0x11";
+            this.bto0x11.Size = new System.Drawing.Size(75, 23);
+            this.bto0x11.TabIndex = 0;
+            this.bto0x11.Text = "0x11";
+            this.bto0x11.UseVisualStyleBackColor = true;
+            this.bto0x11.Click += new System.EventHandler(this.bto0x11_Click);
             // 
             // ControlPanelForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(282, 253);
-            this.Controls.Add(this.TestBtn_1);
+            this.Controls.Add(this.bto0x11);
             this.Name = "ControlPanelForm";
             this.Text = "ControlPanelForm";
             this.ResumeLayout(false);
@@ -55,6 +55,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Button TestBtn_1;
+        private System.Windows.Forms.Button bto0x11;
     }
 }

@@ -35,19 +35,27 @@ namespace ProjectS
                 // Please use a unique name for the mutex to prevent conflicts with other programs
                 using (Mutex mtx = new Mutex(true, "ProjectS", out isFirstInstance))
                 {
-                    if (isFirstInstance)
+                    try
                     {
-                        main = new Main();
-                        Application.Run();
-                    }
-                    else
-                    {
-                        main = new Main();
-                        Application.Run();
+                        if (isFirstInstance)
+                        {
+                            main = new Main();
+                            Application.Run();
+                        }
+                        else
+                        {
+                            main = new Main();
+                            Application.Run();
 
-                        //LogBuilder.buildLog("Already Running!");
-                        //MessageBox.Show("Already Running!");
-                        //Application.Exit();
+                            //LogBuilder.buildLog("Already Running!");
+                            //MessageBox.Show("Already Running!");
+                            //Application.Exit();
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        MessageBox.Show("Fate Error: \n" + e.Message);
+                        Application.Exit();
                     }
                 } // releases the Mutex
 
