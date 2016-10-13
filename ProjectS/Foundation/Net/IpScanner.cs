@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace ProjectS
 {
@@ -91,11 +92,11 @@ namespace ProjectS
             {
                 myHost = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());//得到本地主机的DNS信息
                 DebugForm.DMes("HostName: " + myHost.HostName.ToString());
-                DebugForm.DMes("IpScaning ");
+                //DebugForm.DMes("IpScaning ");
 
                 foreach (var iptable in myHost.AddressList)//显示本地主机的IP地址表
                 {
-                    DebugForm.DMes("-> " + iptable);
+                    //DebugForm.DMes("-> " + iptable);
 
                     if (iptable.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
                         continue;
@@ -171,6 +172,55 @@ namespace ProjectS
             }
 
             return canditateIP;
+        }
+
+        /// <summary>
+        /// 根据所给LIST中提供的IP，开启新线程尝试连接
+        /// </summary>
+        /// <param name="list"></param>
+        /// <param name="index"></param>
+        /// <param name="length"></param>
+        public static void trySoc(List<SocUnity> container, List<String> list, int index, int length)
+        {
+            Thread t = new Thread(new ThreadStart(() =>
+            {
+                for (int i = index; i < index + length; i++)
+                {
+                    SocUnity su = new SocUnity();
+
+                    Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(list[i], Main.PORT));
+
+                    task.ContinueWith(unit =>
+                    {
+                        if (unit.Result == 1)
+                        {
+                            lock(container)
+                                container.Add(su);
+                        }
+                        //else 根据错误码做相应处理
+                    });
+                }
+            }));
+            t.IsBackground = true;
+            t.Start();
+
+            //Task.Run(() =>
+            //{
+            //    for(int i = index;i<index + length;i++)
+            //    {
+            //        SocUnity su = new SocUnity();
+
+            //        Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
+
+            //        task.ContinueWith(unit =>
+            //        {
+            //            if (unit.Result == 1)
+            //                container.Add(su);
+            //            //else 根据错误码做相应处理
+            //        });
+
+            //    }
+            //});
         }
 
         // Summary:

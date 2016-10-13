@@ -107,7 +107,8 @@ namespace ProjectS
 
             while(ls_debug_pointer<ls_debug.Count)
             {
-                tb_debug.AppendText(ls_debug[ls_debug_pointer++] + "\r\n");
+                tb_debug.Invoke(new Action(delegate () { tb_debug.AppendText(ls_debug[ls_debug_pointer] + "\r\n"); }));
+                ls_debug_pointer++;
             }
 
             ls_updator.Start();            

@@ -40,7 +40,7 @@ namespace ProjectS.Forms
 
         private void bto0x11_Click(object sender, EventArgs e)
         {
-            unity.SendByteCommand(0x11, null);
+            unity.SendByteCommand(0x11, (ip,result) => { MessageBox.Show("send information: ip - " + ip + " status - " + result); });
         }
     }
 }

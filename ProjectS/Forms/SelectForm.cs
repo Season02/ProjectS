@@ -14,11 +14,15 @@ namespace ProjectS
     {
         public int index = -1;
 
+        private System.Timers.Timer autoSeclector;
+        private int loops;
+
         public SelectForm()
         {
             InitializeComponent();
-
+            
             InitListView();
+            InitAutoSelector();
 
             //var data = new List<String>();
             //data.Add("192.168.3.100");
@@ -26,6 +30,48 @@ namespace ProjectS
             //data.Add("192.168.3.105");
 
             //AddData(data);
+        }
+
+        private void InitAutoSelector(int loops = 3, double intervsl = 400)
+        {
+            this.loops = loops;
+            //CountDownLb.Text = lb + "3";
+            //CountDownLb.Invoke(new Action(delegate () { CountDownLb.Text = lb + "3"; }));
+
+            autoSeclector = new System.Timers.Timer(intervsl);
+            autoSeclector.Elapsed += new System.Timers.ElapsedEventHandler((s, e) => AutoSelectorFunc(s, e));
+            autoSeclector.AutoReset = true; //每到指定时间Elapsed事件是触发一次（false），还是一直触发（true)
+            autoSeclector.Enabled = true; //是否触发Elapsed事件    
+        }
+
+        private void AutoSelectorFunc(Object Sender, EventArgs e)
+        {
+            if(loops-- > 0)
+            {
+                CountDownLb.Invoke(new Action(delegate () { CountDownLb.Text = "--" + loops + "--";}));
+            }
+            else
+            {
+                autoSeclector.Enabled = false;
+
+                selection_lv.Invoke(new Action(delegate () 
+                {
+                    foreach (ListViewItem item in selection_lv.Items)
+                    {
+                        if(item.Text.Contains("192.168"))
+                        {
+                            item.Selected = true;
+                       
+                            ProcessSocketMonitor.public_index = item.Index;
+                            this.Close();
+
+                            return;
+                        }
+
+                    }
+                }));
+                
+            }
         }
 
         public void AddData(List<String> data)
@@ -113,6 +159,11 @@ namespace ProjectS
                 //MessageBox.Show(selection_lv.SelectedItems[0].Index + "");
                 this.Close();
             }
+        }
+
+        private void selection_lv_MouseUp(object sender, MouseEventArgs e)
+        {
+            autoSeclector.Enabled = false;
         }
     }
 }

@@ -193,6 +193,21 @@ namespace ProjectS
                         return;
                 }
 
+                /*
+                var total = tryList.Count;
+                var loop = 4;
+                int per = total / loop;
+                int tail = total % 4;
+
+                for(int i = 0;i < loop; i++)
+                {
+                    IpScan.trySoc(SocUnityList, tryList, i * per, per);
+
+                    if(i == loop - 1)
+                        IpScan.trySoc(SocUnityList, tryList, (i + 1) * per, 1);
+                }
+                */
+
                 foreach (var ip in tryList)
                 {
                     //ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
@@ -202,9 +217,7 @@ namespace ProjectS
                     //Task.Factory.StartNew(() => TryToGetServant(ip));
 
                     SocUnity su = new SocUnity();
-
                     
-
                     Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
 
                     task.ContinueWith(unit =>
@@ -212,10 +225,8 @@ namespace ProjectS
                         if(unit.Result == 1)
                             SocUnityList.Add(su);
                         //else 根据错误码做相应处理
-            
                     });
-
-
+                    
                     //Task.Factory.StartNew(t);
                     //TryToGetServant(ip);
 

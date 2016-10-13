@@ -28,7 +28,7 @@ namespace ProjectS
         public event ServerAccepted_Event_Handler ServerAccepted;
         public static event SocketConnectionLost_Event_Handler SocketConnectionLost;
         public static event SocketReconnected_Event_Handler SocketReconnected;
-        public event StreamComming_Event_Handler StreamComming;
+        //public event StreamComming_Event_Handler StreamComming;
         public static event SocketConnected_Event_Handler SocketConnected;
 
         private Socket socket;
@@ -109,8 +109,7 @@ namespace ProjectS
             AutoReconnecter.Enabled = true; //是否触发Elapsed事件            
 
             SocketConnectionLost += new SocketConnectionLost_Event_Handler(SocketConnectionLostFunc);
-
-            socket.ReceiveTimeout = 2000;//设置RECEIVE 方法接收超时时间
+            
         }
 
         private void AutoReconnectFunc(Object Sender, EventArgs e)
@@ -214,7 +213,7 @@ namespace ProjectS
                 {
                     System.Net.IPHostEntry myScanHost = System.Net.Dns.GetHostEntry(IP);//址获取 DNS 主机信息.
                     string strHostName = myScanHost.HostName.ToString();//获取主机的名
-
+                 
                     DebugForm.DMes("ClientMode- connecting to: Host Name: " + strHostName + " ip:" + ip + " port : " + port);
 
                     socket.Connect(IP, Main.PORT);
@@ -245,6 +244,7 @@ namespace ProjectS
                     }
 
                     //errorCodeConnect = error.ErrorCode;
+                    if(error.ErrorCode != 10060)
                     DebugForm.DMes("CMode Error at: " + ip + ":" + port + " with code: " + error.ErrorCode);
                     return error.ErrorCode;
                 }
@@ -280,6 +280,9 @@ namespace ProjectS
         {
             //if(this.socket != null) return false;
             this.socket = socket;
+
+            socket.ReceiveTimeout = 2000;//设置RECEIVE 方法接收超时时间
+
             connection_count++;
             AutoReconnecter.Start();
 
@@ -359,6 +362,7 @@ namespace ProjectS
                 ////string json = JsonConvert.SerializeObject(serize);
                 ////var buffer = Encoding.UTF8.GetBytes(json);
 
+
                 byte[] returnBuffer = new byte[DefaultBufferSize];
 
                 try
@@ -367,10 +371,18 @@ namespace ProjectS
                     DebugForm.DMes("package length: " + readyToSend.Length);
 
                     //sendBuffer[index] = data;
-                    socket.Send(readyToSend, 0, DefaultBufferSize, SocketFlags.None);
+                    socket.Send(readyToSend, 0, readyToSend.Length, SocketFlags.None);
 
                     //超过两秒会异常，之后的逻辑处理可以有SOCKET状态检查，或者其他的
-                    socket.Receive(returnBuffer);
+
+
+
+                    //socket.ReceiveTimeout = 2000;
+                    //socket.Receive(returnBuffer);
+                    
+                    
+                    
+                    
                     //这里会阻塞两秒
                     //String returnBufferString = Encoding.UTF8.GetString(returnBuffer);
 
@@ -508,7 +520,7 @@ namespace ProjectS
             ip = socket.RemoteEndPoint.ToString().Split(':')[0];
             port = Convert.ToInt32(socket.RemoteEndPoint.ToString().Split(':')[1]);
             //MessageBox.Show("ClientMode ip: " + ip + " port : " + port);
-            DebugForm.DMes("PassivityMode( ip: " + ip + " port : " + port + " )");
+            DebugForm.DMes("PassivityMode host->( ip: " + ip + " port : " + port + " )");
 
             //Task.Run(() =>
             //{
