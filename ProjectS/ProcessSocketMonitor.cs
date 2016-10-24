@@ -8,11 +8,17 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Windows.Forms;
 
+using ProjectS.Foundation.Net;
+using ProjectS.Foundation.Command;
+using ProjectS.Forms;
+
 namespace ProjectS  
 {
     //get connect to internet,if failed try connect to local server.whatever which got connection , monitoring it.
     public class ProcessSocketMonitor
     {
+        public delegate void RequestSendByteCommand_Event_Handler(object sender, SocUnity unity, ByteCommandUnity.Command command);
+
         public delegate void GotNewSocket_Event_Handler(object sender, Socket socket, String SocketIp);
         //public delegate void SocketCleanup_Event_Handler(object sender, int mode);
 
@@ -24,6 +30,10 @@ namespace ProjectS
 
         private List<SocUnity> SocUnityList = new List<SocUnity>();
         private SocUnity ServantSocUnity;
+
+        //IP TASK
+        private Dictionary<STaskUnity, SocUnity> taskDic = new Dictionary<STaskUnity, SocUnity>();
+        private List<ControlPanelForm> cfList = new List<ControlPanelForm>();
 
         System.Timers.Timer serGuardian = new System.Timers.Timer(5000);
         
@@ -78,6 +88,43 @@ namespace ProjectS
         }
 
         /// <summary>
+        /// 控制面板发送命令时会触发
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="index"></param>
+        /// <param name="command"></param>
+        public void RequestSendByteCommendEvent(object sender, SocUnity sunity, ByteCommandUnity.Command command)
+        {
+            if (sunity == null)
+                return;
+
+            try
+            {
+                sunity.SendByteCommand(command, (ip, result, task) => 
+                {
+                    if (result == 1)
+                    {
+                        //这里需要修改，一台电脑上可以启动 多个 SERVANT 这样他们的IP 时相同的无法分辨
+                        taskDic.Add(command.Task, sunity);
+
+                        DateTime currentTime = new DateTime();
+                        currentTime = DateTime.Now;
+                        
+                        ((ControlPanelForm)sender).UpdateTaskStatus(command.Task, currentTime);
+                    }
+
+                    else
+                        MessageBox.Show("Byte Command Send Failed！ target ip: " + ip + "status: " + result);
+                });
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
+
+        }
+
+        /// <summary>
         /// SOCKET连接丢失时执行此函数
         /// 
         /// 此函数任在建设中，对于 SERVANT MODE 中的丢失 SOCKET 现在采用的是直接
@@ -110,6 +157,30 @@ namespace ProjectS
 
         }
 
+        public void ServantListClickedEvent(object sender, string ip)
+        {
+            try
+            {
+                var su = SearchSocketUnity(ip);
+
+                if (null != su)
+                {
+                    ControlPanelForm cpf = new ControlPanelForm(su);
+                    cpf.RequestSendByteCommand += new RequestSendByteCommand_Event_Handler(RequestSendByteCommendEvent);
+
+                    //集中保管
+                    cfList.Add(cpf);
+
+                    cpf.Show();
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
+
+        }
+
         //Servant 在接入到新的 Master 时调用此事件函数
         private void MasterConnected(object sender, Socket socket, String ip)
         {
@@ -120,7 +191,7 @@ namespace ProjectS
                 SocUnityList.Add(su);
             }
             
-            MessageBox.Show("MasterComming : " + ip);
+            //MessageBox.Show("MasterComming : " + ip);
         }
 
         private void MasterAccepted(IAsyncResult ar)
@@ -210,59 +281,112 @@ namespace ProjectS
 
                 foreach (var ip in tryList)
                 {
+                    TryToGetServant(ip);
                     //ThreadPool.QueueUserWorkItem(new WaitCallback(TryToGetServant), ip);
                     //Task t = new Task(() => TryToGetServant(ip));
                     //t.Start();
 
                     //Task.Factory.StartNew(() => TryToGetServant(ip));
 
-                    SocUnity su = new SocUnity();
-                    
-                    Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
 
-                    task.ContinueWith(unit =>
-                    {
-                        if(unit.Result == 1)
-                            SocUnityList.Add(su);
-                        //else 根据错误码做相应处理
-                    });
-                    
-                    //Task.Factory.StartNew(t);
-                    //TryToGetServant(ip);
 
-                    //Thread t = new Thread(new ThreadStart(() =>
+                    //SocUnity su = new SocUnity();
+
+                    //Task<int> task = Task<int>.Factory.StartNew(() => su.ClientMode(ip, Main.PORT));
+
+                    //task.ContinueWith(unit =>
                     //{
-                    //TryToGetServant(ip);
-                    //}));
-                    //t.Start();
-               }
-                
+                    //    if (unit.Result == 1)
+                    //        SocUnityList.Add(su);
+                    //    //else 根据错误码做相应处理
+                    //});
+                }
+
                 SocUnity.SocketReconnected += new SocUnity.SocketReconnected_Event_Handler(ServantReconnectedEvent);
             });
+        }
+
+        // 尝试与 Servant 进行连接，无论连接成功与否 新建的SocUnity都会加入到SocUnityList中，用于后期维护。
+        // 关于还未连接完成的 SocUnity 的后续处理目前任在建设中。
+        private void TryToGetServant(string ip)
+        {
+            Thread t = new Thread(new ThreadStart(() =>
+            {
+                SocUnity su = new SocUnity();
+                int status = -1000;
+
+                su.ClientMode(ip, Main.PORT, out status);
+
+                if (status == 1)
+                {
+                    SocUnityList.Add(su);
+                    su.ReceivedSTask += new SocUnity.STaskReceived_Event_Handler(ReceivedStask);
+                }
+            }));
+            t.IsBackground = true;
+            t.Start();
+        }
+
+        /// <summary>
+        /// 接收到 SERVANT 发来的 STASK !!!!!!!!!!!!!!!! 逻辑繁杂，需要优化
+        /// </summary>
+        /// <param name="stask"></param>
+        private void ReceivedStask(object sender, STaskUnity stask)
+        {
+            var identifier = stask.Identifier;
+
+            //先更新下 TASK 表
+            foreach (var raw in taskDic)
+            {
+                if (raw.Key.Identifier == identifier)
+                {
+                    //注意不要把更新到这个 task 变量上了，这是一个临时变量，更新它没用
+                    var task = raw.Key;
+
+                    if (task.TaskType == STaskUnity.Task.StatusTask)
+                    {
+                        raw.Key.Status = stask.Status;
+                    }
+                    else if (task.TaskType == STaskUnity.Task.ProgressTask)
+                    {
+                        raw.Key.Progress = stask.Progress;
+                    }
+                }
+            }
+
+            //然后通知更新界面
+            for (int i = cfList.Count - 1; i >= 0; i--)
+            {
+                if (cfList[i].IsDisposed)
+                {
+                    cfList.RemoveAt(i);
+                    continue;
+                }
+
+                //此循环的目的在于找到一个存在于 大概
+                foreach (var raw in taskDic)
+                {
+                    if(raw.Key.Identifier == stask.Identifier)
+                    {
+                        var unity = raw.Value;
+
+                        if(cfList[i].Unity == unity)
+                        {
+                            DateTime currentTime = new DateTime();
+                            currentTime = DateTime.Now;
+
+                            cfList[i].UpdateTaskStatus(stask, currentTime);
+
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private void ServantReconnectedEvent(object sender, Socket socket, String ip)
         {
             MessageBox.Show("SocketReconnectedEvent ip: " + ip);
-        }
-
-        // 尝试与 Servant 进行连接，无论连接成功与否 新建的SocUnity都会加入到SocUnityList中，用于后期维护。
-        //
-        // 关于还未连接完成的 SocUnity 的后续处理目前任在建设中。
-        private void TryToGetServant(Object str)
-        {
-            try
-            {
-                String ip = str as String;
-                SocUnity su = new SocUnity();
-                su.ClientMode(ip, Main.PORT);
-                SocUnityList.Add(su);
-            }
-            catch(Exception e)
-            {
-                MessageBox.Show(e.StackTrace);
-            }
-            
         }
 
         private void ConnectedToServantEvent(object sender, Socket socket, String ip)

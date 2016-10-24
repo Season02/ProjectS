@@ -14,6 +14,9 @@ namespace ProjectS
 {
     public partial class FormMasterMode : Form
     {
+        public delegate void ServantListClicked_Event_Handler(object sender, string ip);
+        public ServantListClicked_Event_Handler ServantListClicked;
+
         /// <summary>
         /// 用来与 SocketUtils 通信
         /// </summary>
@@ -119,12 +122,6 @@ namespace ProjectS
             ServantLv.EndUpdate();  //结束数据处理，UI界面一次性绘制。
         }
 
-        private void DMes(String mes)
-        {
- 
-        }
-
-
         /// <summary>
         /// 发送流什么的目前没有这方面想法，简单粗暴的把 SocketUtil 传递给
         /// Control Panel 就OK
@@ -135,23 +132,28 @@ namespace ProjectS
         {
             if (ServantLv.SelectedItems.Count > 0)
             {
-                //string tmp = ServantLv.SelectedItems[0].Text;
-                //// MessageBox.Show(tmp);
+                ServantListClicked(this, ServantLv.SelectedItems[0].Text);
 
-                
+                //var su = socketMonitor.SearchSocketUnity(ServantLv.SelectedItems[0].Text);
 
-                var su = socketMonitor.SearchSocketUnity(ServantLv.SelectedItems[0].Text);
+                //if(null != su)
+                //{
+                //    ////获取到SOCKET,传递给 CPF
+                //    ControlPanelForm cpf = new ControlPanelForm();
 
-                if(null != su)
-                {
-                    ////获取到SOCKET,传递给 CPF
+                //    cpf.RequestSendByteCommand += new ProcessSocketMonitor.RequestSendByteCommand_Event_Handler(socketMonitor.RequestSendByteCommendEvent);
 
-                    ControlPanelForm cpf = new ControlPanelForm();
-                    cpf.Unity = su;
-                    cpf.ShowDialog();
-                }
+                //    //cpf.Unity = su;
+                //    cpf.Show();
+                //}
 
             }
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+            //ControlPanelForm cpf = new ControlPanelForm();
+            //cpf.Show();
         }
     }
 }

@@ -9,7 +9,7 @@ namespace ProjectS
 {
     class TxtIntrop
     {
-        private static String PATH = "s.ini";
+        private static String PATH = "SProject";
 
         public static String[] getAllLine(String file)
         {

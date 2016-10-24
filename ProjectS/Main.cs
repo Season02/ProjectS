@@ -195,6 +195,8 @@ namespace ProjectS
                         fmm = new FormMasterMode();
 
                         fmm.SocketMonitor = psm;
+                        //设置 FORMMASTER 的点击事件到 PSM 里
+                        fmm.ServantListClicked += new FormMasterMode.ServantListClicked_Event_Handler(psm.ServantListClickedEvent);
                         
                         fmm.ShowDialog();
                         //一下代码会被阻塞

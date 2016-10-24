@@ -8,6 +8,9 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
+using ProjectS.Foundation.Command;
+using ProjectS.Foundation.Net;
+
 namespace ProjectS.CommonClasses.Util
 {
     public class StreamUnity
@@ -61,6 +64,16 @@ namespace ProjectS.CommonClasses.Util
             {
                 IFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(ms, unity);
+                return ms.GetBuffer();
+            }
+        }
+
+        public static byte[] Serialization(Object obj)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                IFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(ms, obj);
                 return ms.GetBuffer();
             }
         }
@@ -127,6 +140,15 @@ namespace ProjectS.CommonClasses.Util
             }
         }
 
+        public static Object DeSerialization(byte[] package)
+        {
+            using (MemoryStream ms = new MemoryStream(package))
+            {
+                IFormatter formatter = new BinaryFormatter();
+                return formatter.Deserialize(ms);
+            }
+        }
+
         //public static object BytesToObject(byte[] Bytes)
         //{
         //    using (MemoryStream ms = new MemoryStream(Bytes))
@@ -149,10 +171,33 @@ namespace ProjectS.CommonClasses.Util
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        public static byte[] CreateByteCommandPackage(byte command)
+        /// 
+
+        public static byte[] CreateByteCommandPackage(byte leftCommand, byte rightCommand, out STaskUnity task)
         {
-            var data = new byte[1];
-            data[0] = command;
+            ByteCommandUnity.Command command = new ByteCommandUnity.Command(leftCommand,rightCommand);
+            task = command.Task;
+
+            var data = Serialization(command);
+
+            return CreatePackage(Unity.Package_Type_ByteCommand, 1, 0, data, null);
+        }
+
+        public static byte[] CreateByteCommandPackage(byte leftCommand, out STaskUnity task)
+        {
+            ByteCommandUnity.Command command = new ByteCommandUnity.Command(leftCommand);
+            task = command.Task;
+
+            var data = Serialization(command);
+
+            return CreatePackage(Unity.Package_Type_ByteCommand, 1, 0, data, null);
+        }
+
+        public static byte[] CreateByteCommandPackage(ByteCommandUnity.Command command, out STaskUnity task)
+        {
+            task = command.Task;
+
+            var data = Serialization(command);
 
             return CreatePackage(Unity.Package_Type_ByteCommand, 1, 0, data, null);
         }
@@ -175,10 +220,22 @@ namespace ProjectS.CommonClasses.Util
 
         //    return target[0];
         //}
-        public static byte ExtractByteCommandPackage(byte[] package)
+        public static ByteCommandUnity.Command ExtractByteCommandPackage(byte[] package)
         {
             var data = UnityComeTransform(package).Data;
-            return data[0];
+
+            var command = DeSerialization(data) as ByteCommandUnity.Command;
+
+            return command;
+        }
+
+        public static ByteCommandUnity.Command ExtractByteCommandPackage(Unity package)
+        {
+            var data = package.Data;
+
+            var command = DeSerialization(data) as ByteCommandUnity.Command;
+
+            return command;
         }
 
         //public static bool CheckEchoStatus(byte[] package)
@@ -204,12 +261,68 @@ namespace ProjectS.CommonClasses.Util
                 return false;
         }
 
-        public static byte[] CreateEchoPackage(byte command)
+        public static byte[] CreateEchoPackage()
         {
             var buffer = Encoding.UTF8.GetBytes(Unity.Package_Status_Success);
             return CreatePackage(Unity.Package_Type_Echo, 1, 0, buffer, null);
         }
 
+        public static byte[] CreateStatusPackage(bool status)
+        {
+            var buffer = Encoding.UTF8.GetBytes(status? Unity.Package_Status_Success : Unity.Package_Status_Failed);
+            return CreatePackage(Unity.Package_Type_Echo, 1, 0, buffer, null);
+        }
+
+        /// <summary>
+        /// 创建任务状态包，用来回馈任务的执行装填， dataExtra 用来携带一些附加信息
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="dateExtra"></param>
+        /// <returns></returns>
+        public static byte[] CreateSTaskPackage(STaskUnity task, byte[] dataExtra)
+        {
+            var data = Serialization(task);
+
+            return CreatePackage(Unity.Package_Type_STask, 1, 0, data, dataExtra);
+        }
+
+        public static STaskUnity ExtractSTaskPackage(byte[] package)
+        {
+            var data = UnityComeTransform(package).Data;
+
+            var stask = DeSerialization(data) as STaskUnity;
+
+            return stask;
+        }
+
+        public static STaskUnity ExtractSTaskPackage(Unity package)
+        {
+            var data = package.Data;
+
+            var stask = DeSerialization(data) as STaskUnity;
+
+            return stask;
+        }
+
+        /// <summary>
+        /// 测试阶段使用，只有一个包，实际使用时文本可能很长，应该会需要很多个包轮回发送，在这时候也考虑到多包连续发送
+        /// 的问题，需要发送和接收交替，发送然后确认，再发送
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public static byte[] CreateTextPackage(string text)
+        {
+            var buffer = Encoding.UTF8.GetBytes(text);
+            return CreatePackage(Unity.Package_Type_Text, 1, 0, buffer, null);
+        }
+
+        public static string ExtractTextPackage(Unity package)
+        {
+            var result = Encoding.UTF8.GetString(package.Data);
+            result = result.Trim();
+
+            return result;
+        }
 
 
     }
@@ -220,15 +333,12 @@ namespace ProjectS.CommonClasses.Util
     [ Serializable ]
     public class Unity
     {
-        public const string Package_Dic_Key_Type = "Type";
-        public const string Package_Dic_Key_Package_Amount = "PackageAmount";
-        public const string Package_Dic_Key_Package_Index = "PackageIndex";
-        public const string Package_Dic_Key_Data = "Data";
-        public const string Package_Dic_Key_Data_Extra = "DataExtra";
-        //public const string Package_Dic_Key_Status = "Status";
+        public const string Package_Type_ByteCommand = "ByteCommand";//字节命令
+        public const string Package_Type_Echo = "Echo";//包接收成功回发信号
+        public const string Package_Type_Status = "Status";//执行状态
+        public const string Package_Type_Text = "Text";//执行状态
 
-        public const string Package_Type_ByteCommand = "ByteCommand";
-        public const string Package_Type_Echo = "Echo";
+        public const string Package_Type_STask = "STask";//执行状态
 
         public const string Package_Status_Success = "Success";
         public const string Package_Status_Failed = "failed";

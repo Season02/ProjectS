@@ -11,13 +11,18 @@ using System.Windows.Forms;
 using Newtonsoft.Json;
 
 using ProjectS.CommonClasses.Util;
+using ProjectS.Foundation.Command;
+using ProjectS.Foundation.Net;
 
 namespace ProjectS
 {
     //SOCKET HELPER
     public class SocUnity
     {
-        public delegate void DelegateSendDone(String ip, int state);
+        public delegate void STaskReceived_Event_Handler(object sender, STaskUnity stask);
+        public STaskReceived_Event_Handler ReceivedSTask;
+
+        public delegate void DelegateSendDone(String ip, int state, STaskUnity task);
 
         public delegate void ServerAccepted_Event_Handler(object sender, Socket socket, String ip);
         public delegate void SocketConnectionLost_Event_Handler(object sender, Socket socket, String ip);
@@ -37,7 +42,7 @@ namespace ProjectS
         private int errorCodeConnect = 0;
 
         //32位最大能一次表达4G的文件，现在不会一次发送传送超过这个量级
-        private int DefaultBufferSize = 1024;
+        //private int DefaultBufferSize = 1024;
 
         public int ErrorCodeConnect
         {
@@ -56,7 +61,7 @@ namespace ProjectS
 
         const int HEAD_LENGTH = 32;//byte
 
-        private const int DefaultStreamBufferSize = 1024;
+        private const int DefaultStreamBufferSize = 4096;
         private static int StreamBufferSize = DefaultStreamBufferSize;
         private byte[] StreamBuffer = new byte[StreamBufferSize];
 
@@ -109,7 +114,6 @@ namespace ProjectS
             AutoReconnecter.Enabled = true; //是否触发Elapsed事件            
 
             SocketConnectionLost += new SocketConnectionLost_Event_Handler(SocketConnectionLostFunc);
-            
         }
 
         private void AutoReconnectFunc(Object Sender, EventArgs e)
@@ -276,6 +280,83 @@ namespace ProjectS
             return 1;
         }
 
+        public void ClientMode(String ip, int port, out int status)
+        {
+            System.Net.IPAddress IP = System.Net.IPAddress.Parse(ip);//转换成IP地址
+            //int return_code = 0;
+
+            IPEndPoint address = new IPEndPoint(IP, port);
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                System.Net.IPHostEntry myScanHost = System.Net.Dns.GetHostEntry(IP);//址获取 DNS 主机信息.
+                string strHostName = myScanHost.HostName.ToString();//获取主机的名
+
+                DebugForm.DMes("ClientMode- connecting to: Host Name: " + strHostName + " ip:" + ip + " port : " + port);
+
+                socket.Connect(IP, Main.PORT);
+            }
+            catch (SocketException error)
+            {
+                switch (error.ErrorCode)
+                {
+                    //The attempt to connect timed out.
+                    case 10060:
+                        break;
+
+                    //Connection is forcefully rejected.
+                    case 10061:
+                        break;
+
+                    //Authoritative answer: Host not found.
+                    case 11001:
+                        break;
+
+                    //Valid name, no data record of requested type
+                    case 11004:
+                        break;
+
+                    default:
+                        MessageBox.Show("error code: " + error.ErrorCode + "\r\n" + error.Message + " ip: " + IP.ToString());
+                        break;
+                }
+
+                //errorCodeConnect = error.ErrorCode;
+                if (error.ErrorCode != 10060)
+                    DebugForm.DMes("CMode Error at: " + ip + ":" + port + " with code: " + error.ErrorCode);
+
+                status = error.ErrorCode;
+                return;
+            }
+            catch (Exception e)
+            {
+                //errorCodeConnect = -1;
+                DebugForm.DMes("ClientMode: connecting Error: " + ip + ":" + port);
+                MessageBox.Show(e.Message + " ip: " + IP.ToString());
+
+                status = -1;
+                return;
+            }
+
+            try
+            {
+                ClientMode(socket);
+                SocketConnected(this, socket, ip);
+            }
+            catch (NullReferenceException e)
+            {
+                MessageBox.Show(e.Message + " ip: " + IP.ToString());
+
+                status = -2;
+                return;
+            }
+
+            //else errorCodeConnect = -2;
+
+            status = 1;
+            return;
+        }
+
         public bool ClientMode(Socket socket)
         {
             //if(this.socket != null) return false;
@@ -348,51 +429,43 @@ namespace ProjectS
         /// <param name="data"></param>
         public void SendByteCommand(byte command, DelegateSendDone doneDelegate)
         {
+            var com = new ByteCommandUnity.Command(command);
+
+            SendByteCommand(com, doneDelegate);
+
+            return;
+        }
+
+        /// <summary>
+        /// 没啥要说的，太麻烦
+        /// </summary>
+        /// <param name="command"></param>
+        ///　
+        /// <param name="doneDelegate"></param>
+        public void SendByteCommand(ByteCommandUnity.Command command, DelegateSendDone doneDelegate)
+        {
+            STaskUnity taskUnity = null;
+
             Task<int> task = Task<int>.Factory.StartNew(() =>
             {
                 if (socket.Connected != true)
                     return -1;
 
-                ////var serize = new Dictionary<String, object>();
-                ////serize.Add("type", "byte_command");
-                ////serize.Add("total_count", "1");
-                ////serize.Add("current_index", "0");
-                ////serize.Add("data", data);
-
-                ////string json = JsonConvert.SerializeObject(serize);
-                ////var buffer = Encoding.UTF8.GetBytes(json);
-
-
-                byte[] returnBuffer = new byte[DefaultBufferSize];
+                //byte[] returnBuffer;// = new byte[DefaultBufferSize];
 
                 try
                 {
-                    byte[] readyToSend = StreamUnity.CreateByteCommandPackage(command);
+                    byte[] readyToSend = StreamUnity.CreateByteCommandPackage(command, out taskUnity);
                     DebugForm.DMes("package length: " + readyToSend.Length);
 
-                    //sendBuffer[index] = data;
                     socket.Send(readyToSend, 0, readyToSend.Length, SocketFlags.None);
 
-                    //超过两秒会异常，之后的逻辑处理可以有SOCKET状态检查，或者其他的
+                    return 1;
 
-
-
-                    //socket.ReceiveTimeout = 2000;
-                    //socket.Receive(returnBuffer);
-                    
-                    
-                    
-                    
-                    //这里会阻塞两秒
-                    //String returnBufferString = Encoding.UTF8.GetString(returnBuffer);
-
-                    //Dictionary<string, string> htmlAttributes = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnBufferString);
-                    //String returnState = htmlAttributes["state"];
-
-                    if (StreamUnity.CheckEchoStatus(returnBuffer))
-                        return 1;
-                    else
-                        return 0;
+                    //if (StreamUnity.CheckEchoStatus(returnBuffer))
+                    //    return 1;
+                    //else
+                    //    return 0;
                 }
                 catch (SocketException ex)
                 {
@@ -405,10 +478,13 @@ namespace ProjectS
             task.ContinueWith(unit =>
             {
                 //if (unit.Result == 1)
-                    doneDelegate(ip, unit.Result);
+                {
+                    doneDelegate(ip, unit.Result, taskUnity);
+                }
+
                 //else 根据错误码做相应处理
             });
-            
+
         }
 
         /// <summary>
@@ -460,6 +536,8 @@ namespace ProjectS
                     MessageBox.Show(ip + " EndReceive by zero!");
                     return;
                 }
+
+                //SendEcho(socket);
             }
             catch (Exception e)
             {
@@ -467,26 +545,63 @@ namespace ProjectS
                 SocketConnectionLost(this, this.socket, ip);
                 return;
             }
-
+            
             Unity unity = StreamUnity.UnityComeTransform(StreamBuffer);
 
             switch(unity.Type)
             {
                 case Unity.Package_Type_ByteCommand:
-
+                    
                     Task.Run(() =>
                     {
                         ByteCommand bc = new ByteCommand(socket);
-                        bc.Execute(unity.Data, unity.DataExtra);
+                        var command = StreamUnity.ExtractByteCommandPackage(unity);
+                        bc.Execute(command, unity.DataExtra);
+
+                        var stask = command.Task;
+                        stask.Status = true;
+
+                        SendSTask(socket, stask);
+                    });
+                    break;
+
+                case Unity.Package_Type_Text:
+
+                    Task.Run(() =>
+                    {
+                        string message = StreamUnity.ExtractTextPackage(unity);
+                        DebugForm.DMes(message);
+                    });
+                    break;
+
+                case Unity.Package_Type_STask:
+
+                    Task.Run(() =>
+                    {
+                        var stask = StreamUnity.ExtractSTaskPackage(unity);
+
+                        ReceivedSTask(this, stask);
                     });
                     break;
 
                 default:
                     break;
             }
-
+            
             socket.BeginReceive(StreamBuffer, 0, StreamBuffer.Length, SocketFlags.None, new AsyncCallback(BeginReceiveCallback), socket);           
             
+        }
+
+        private void SendEcho(Socket socket)
+        {
+            byte[] readyToSend = StreamUnity.CreateEchoPackage();
+            socket.BeginSend(readyToSend, 0, readyToSend.Length, SocketFlags.None, null, null);
+        }
+
+        private void SendSTask(Socket socket, STaskUnity stask)
+        {
+            byte[] readyToSend = StreamUnity.CreateSTaskPackage(stask, null);
+            socket.BeginSend(readyToSend, 0, readyToSend.Length, SocketFlags.None, null, null);
         }
 
         private void tryBeginReceiveCallback(IAsyncResult ar)

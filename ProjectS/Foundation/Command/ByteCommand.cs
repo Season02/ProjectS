@@ -17,6 +17,9 @@ using System.Windows.Media.Imaging;
 
 using System.Runtime.InteropServices;
 
+using ProjectS.CommonClasses.Util;
+using ProjectS.Foundation.Command;
+
 namespace ProjectS
 {
     class ByteCommand
@@ -128,18 +131,68 @@ namespace ProjectS
 
         }
 
-        public void Execute(byte[] command, byte[] dataExtra)
+        /// <summary>
+        /// 返回的布尔量时执行状态，成功的话就返回 TRUE 这个会回发给 MASTER
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="dataExtra"></param>
+        /// <returns></returns>
+        public bool Execute(ByteCommandUnity.Command command, byte[] dataExtra)
         {
             //0x10 - 0xf5
 
-            switch (command[0])
+            switch (command.LeftCommand)
             {
                 case 0x11:
                     MessageBox.Show("Hello See You Again!");
-                    break;
+                    return true;
+
+                case 0x12://回发字符串
+
+                    byte[] readyToSend = StreamUnity.CreateTextPackage("来自 IP：" + clientSocket.AddressFamily.ToString() + " 的消息");
+                    DebugForm.DMes("package length: " + readyToSend.Length);
+
+                    clientSocket.Send(readyToSend, 0, readyToSend.Length, SocketFlags.None);
+
+                    return true;
+
+
+
+
+
+
+
+
+
+
+
+                //**   Media!  **//
+                case 0x90:
+                    KeySimulator.Play();
+                    return true;
+
+                case 0x91:
+                    KeySimulator.Stop();
+                    return true;
+
+                case 0x92:
+                    KeySimulator.Previous();
+                    return true;
+
+                case 0x93:
+                    KeySimulator.Next();
+                    return true;
+
+                case 0x94:
+
+                    return true;
+
+                case 0x95:
+
+                    return true;
 
                 default:
-                    break;
+                    return false;
             }
 
             /*

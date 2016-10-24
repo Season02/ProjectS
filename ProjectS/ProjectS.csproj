@@ -69,6 +69,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Foundation\Command\ByteCommandUnity.cs" />
+    <Compile Include="Foundation\Net\STaskUnity.cs" />
     <Compile Include="Foundation\Net\StreamUnity.cs" />
     <Compile Include="CommonClasses\Util\JsonConveter\Bson\BsonBinaryType.cs" />
     <Compile Include="CommonClasses\Util\JsonConveter\Bson\BsonBinaryWriter.cs" />
@@ -278,9 +280,9 @@
     <Compile Include="Forms\BlueForm.Designer.cs">
       <DependentUpon>BlueForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="CommonClasses\Util\adjustVolume.cs" />
+    <Compile Include="CommonClasses\Util\KeySimulator.cs" />
     <Compile Include="Broadcast.cs" />
-    <Compile Include="ByteCommand.cs" />
+    <Compile Include="Foundation\Command\ByteCommand.cs" />
     <Compile Include="CommonClasses\Hook\MouseKeyHook.cs" />
     <Compile Include="Foundation\Net\IpScanner.cs" />
     <Compile Include="CommonClasses\Util\LogBuilder.cs" />

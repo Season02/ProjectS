@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 
 namespace ProjectS
 {
-    public class adjustVolume
+    public class KeySimulator
     {       
         public const uint WM_APPCOMMAND = 0x319;
         public const uint APPCOMMAND_VOLUME_UP = 0x0a;
